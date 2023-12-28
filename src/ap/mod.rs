@@ -375,7 +375,7 @@ where
     T: AbstractProcess,
 {
     /// Construct a process from a raw ID.
-    unsafe fn new(node_id: u64, process_id: u64) -> Self {
+    pub unsafe fn new(node_id: u64, process_id: u64) -> Self {
         let process = Process::new(node_id, process_id);
         ProcessRef { process }
     }
