@@ -461,7 +461,7 @@ where
     /// If a timeout is specified the function will only block for the timeout
     /// period before returning `Err(Timeout)`.
     #[track_caller]
-    pub(crate) fn shutdown_timeout(&self, timeout: Option<Duration>) -> Result<(), Timeout>
+    pub fn shutdown_timeout(&self, timeout: Option<Duration>) -> Result<(), Timeout>
     where
         // The serializer needs to be able to serialize values of `ShutdownMessage` & `()` for the
         // return value.
