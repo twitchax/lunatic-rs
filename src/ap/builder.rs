@@ -81,7 +81,7 @@ where
     /// `StartupError::Custom(error)`. If the `init` function panics during
     /// execution, it will return [`StartupError::InitPanicked`].
     #[track_caller]
-    pub fn start(&self, arg: T::Arg) -> Result<ProcessRef<T>, StartupError<T>> {
+    pub fn start(&self, arg: T::Arg, timeout: core::time::Duration) -> Result<ProcessRef<T>, StartupError<T>> {
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
@@ -122,7 +122,7 @@ where
         // Wait on `init()`
         let mailbox: Mailbox<Result<(), StartupError<T>>, T::Serializer> =
             unsafe { Mailbox::new() };
-        match mailbox.tag_receive(&[init_tag]) {
+        match mailbox.tag_receive_timeout(&[init_tag], timeout) {
             Ok(()) => Ok(ProcessRef { process }),
             Err(err) => Err(err),
         }
