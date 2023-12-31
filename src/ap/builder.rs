@@ -81,7 +81,61 @@ where
     /// `StartupError::Custom(error)`. If the `init` function panics during
     /// execution, it will return [`StartupError::InitPanicked`].
     #[track_caller]
-    pub fn start(&self, arg: T::Arg, timeout: core::time::Duration) -> Result<ProcessRef<T>, StartupError<T>> {
+    pub fn start(&self, arg: T::Arg) -> Result<ProcessRef<T>, StartupError<T>> {
+        let init_tag = Tag::new();
+        let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
+        let entry_data = (this, init_tag, arg);
+        let process = match (self.link, &self.config, self.node) {
+            (Some(_), _, Some(_node)) => {
+                unimplemented!("Linking across nodes is not supported yet");
+            }
+            (Some(tag), Some(config), None) => Process::<(), T::Serializer>::spawn_link_config_tag(
+                config,
+                entry_data,
+                tag,
+                lifecycles::entry::<T>,
+            ),
+            (Some(tag), None, None) => Process::<(), T::Serializer>::spawn_link_tag(
+                entry_data,
+                tag,
+                lifecycles::entry::<T>,
+            ),
+            (None, Some(config), Some(node)) => Process::<(), T::Serializer>::spawn_node_config(
+                node,
+                config,
+                entry_data,
+                lifecycles::entry::<T>,
+            ),
+            (None, None, Some(node)) => {
+                Process::<(), T::Serializer>::spawn_node(node, entry_data, lifecycles::entry::<T>)
+            }
+            (None, Some(config), None) => Process::<(), T::Serializer>::spawn_config(
+                config,
+                entry_data,
+                lifecycles::entry::<T>,
+            ),
+            (None, None, None) => {
+                Process::<(), T::Serializer>::spawn(entry_data, lifecycles::entry::<T>)
+            }
+        };
+
+        // Wait on `init()`
+        let mailbox: Mailbox<Result<(), StartupError<T>>, T::Serializer> =
+            unsafe { Mailbox::new() };
+        match mailbox.tag_receive(&[init_tag]) {
+            Ok(()) => Ok(ProcessRef { process }),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Starts a new `AbstractProcess` and returns a reference to it.
+    ///
+    /// This call will block until the `init` function finishes. If the `init`
+    /// function returns an error, it will be returned as
+    /// `StartupError::Custom(error)`. If the `init` function panics during
+    /// execution, it will return [`StartupError::InitPanicked`].
+    #[track_caller]
+    pub fn start_timeout(&self, arg: T::Arg, timeout: core::time::Duration) -> Result<ProcessRef<T>, StartupError<T>> {
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
