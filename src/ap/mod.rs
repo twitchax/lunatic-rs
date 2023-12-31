@@ -660,6 +660,8 @@ pub enum StartupError<AP: AbstractProcess> {
     /// The name supplied to `start_as` is already registered.
     #[serde(bound(serialize = "", deserialize = ""))]
     NameAlreadyRegistered(ProcessRef<AP>),
+    /// A timeout.
+    TimedOut,
     /// A custom error.
     Custom(AP::StartupError),
 }
@@ -673,7 +675,8 @@ where
             Self::InitPanicked => write!(f, "InitPanicked"),
             Self::NameAlreadyRegistered(arg0) => {
                 f.debug_tuple("NameAlreadyRegistered").field(arg0).finish()
-            }
+            },
+            Self::TimedOut => write!(f, "TimedOut"),
             Self::Custom(arg0) => f.debug_tuple("Custom").field(arg0).finish(),
         }
     }
@@ -687,6 +690,7 @@ where
         match self {
             Self::InitPanicked => Self::InitPanicked,
             Self::NameAlreadyRegistered(arg0) => Self::NameAlreadyRegistered(*arg0),
+            Self::TimedOut => Self::TimedOut,
             Self::Custom(arg0) => Self::Custom(arg0.clone()),
         }
     }

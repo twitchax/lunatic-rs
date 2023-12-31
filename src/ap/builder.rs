@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use super::{lifecycles, AbstractProcess, ProcessRef, StartupError};
-use crate::function::process::{process_name, ProcessType};
+use crate::{function::process::{process_name, ProcessType}, MailboxError};
 use crate::{LunaticError, Mailbox, Process, ProcessConfig, ProcessName, Tag};
 
 trait IntoAbstractProcessBuilder<T> {}
@@ -177,8 +177,14 @@ where
         let mailbox: Mailbox<Result<(), StartupError<T>>, T::Serializer> =
             unsafe { Mailbox::new() };
         match mailbox.tag_receive_timeout(&[init_tag], timeout) {
-            Ok(()) => Ok(ProcessRef { process }),
-            Err(err) => Err(err),
+            Ok(m) => match m {
+                Ok(()) => Ok(ProcessRef { process }),
+                Err(err) => Err(err),
+            },
+            Err(err) => match err {
+                MailboxError::TimedOut => Err(StartupError::TimedOut),
+                _ => unreachable!("tag_receive_timeout should panic in case of other errors"),
+            },
         }
     }
 
