@@ -8,20 +8,33 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # The test runner in `.cargo/config.toml` points at `../lunatic`, so both
+      # repos are checked out side by side.
       - name: "Check out repository"
-        uses: actions/checkout@v3
-      - name: "Install lunatic"
-        run: cargo install --git https://github.com/lunatic-solutions/lunatic lunatic-runtime
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
+        uses: actions/checkout@v7
         with:
-          toolchain: stable
-          target: wasm32-wasi
-          override: true
+          path: lunatic-rs
+      - name: "Check out lunatic"
+        uses: actions/checkout@v7
+        with:
+          repository: twitchax/lunatic
+          # The wasmtime upgrade lives on this branch until it merges to main.
+          ref: upgrade
+          path: lunatic
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
           components: rustfmt, clippy
+      - name: "Build lunatic"
+        working-directory: lunatic
+        run: cargo build --release
       - name: "Run tests"
+        working-directory: lunatic-rs
         run: cargo test --workspace --features json_serializer,msgpack_serializer,protobuf_serializer,sqlite
       - name: "Run clippy"
+        working-directory: lunatic-rs
         run: cargo clippy --features json_serializer,msgpack_serializer,protobuf_serializer,sqlite -- -D warnings
       - name: "Check formatting"
+        working-directory: lunatic-rs
         run: cargo fmt -- --check
