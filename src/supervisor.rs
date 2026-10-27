@@ -15,6 +15,30 @@ use crate::{host, Tag};
 /// # Example
 ///
 /// ```
+/// use lunatic::ap::ProcessRef;
+/// use lunatic::supervisor::{Supervisor, SupervisorConfig, SupervisorStrategy};
+/// # use lunatic::ap::handlers::Request;
+/// # use lunatic::ap::{AbstractProcess, Config, RequestHandler, State};
+/// # struct Counter(u32);
+/// # impl AbstractProcess for Counter {
+/// #     type State = Self;
+/// #     type Serializer = lunatic::serializer::Bincode;
+/// #     type Arg = u32;
+/// #     type Handlers = (Request<Count>,);
+/// #     type StartupError = ();
+/// #     fn init(_: Config<Self>, count: u32) -> Result<Self, ()> {
+/// #         Ok(Counter(count))
+/// #     }
+/// # }
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Count;
+/// # impl RequestHandler<Count> for Counter {
+/// #     type Response = u32;
+/// #     fn handle(state: State<Self>, _: Count) -> u32 {
+/// #         state.0
+/// #     }
+/// # }
+///
 /// struct Sup;
 /// impl Supervisor for Sup {
 ///     type Arg = ();
@@ -25,11 +49,12 @@ use crate::{host, Tag};
 ///         // If a child fails, just restart it.
 ///         config.set_strategy(SupervisorStrategy::OneForOne);
 ///         // Start each `Counter` with a state of `0` & name last child "hello".
-///         config.children_args((0, None),(0, None),(0, "hello".to_owned()));
+///         config.set_args((0, 0, 0));
+///         config.set_names((None, None, Some("hello".to_owned())));
 ///     }
 /// }
 ///
-/// let sup = Sup::start((), None);
+/// let sup = Sup::start(()).unwrap();
 /// let children = sup.children();
 /// let count1 = children.2.request(Count);
 /// // Get reference to named child.

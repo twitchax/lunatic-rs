@@ -24,8 +24,8 @@ use crate::net::TlsStream;
 ///
 /// fn main() {
 ///     let key = std::fs::read("example.key").unwrap();
-///     let cert = let key = std::fs::read("example.crt").unwrap();
-///     let listener = net::TlsListener::bind("127.0.0.1:0", key, cert).unwrap();
+///     let cert = std::fs::read("example.crt").unwrap();
+///     let listener = net::TlsListener::bind("127.0.0.1:0", cert, key).unwrap();
 ///     while let Ok((tls_stream, _peer)) = listener.accept() {
 ///         // Handle connections in a new process
 ///         Process::spawn(tls_stream, handle);

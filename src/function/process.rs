@@ -65,6 +65,8 @@ pub trait NoLink {}
 /// # Example
 ///
 /// ```
+/// use lunatic::{Mailbox, Process};
+///
 /// let child = Process::spawn(1, |capture, mailbox: Mailbox<i32>| {
 ///    assert_eq!(capture, 1);
 ///    assert_eq!(mailbox.receive(), 2);
@@ -96,8 +98,11 @@ pub trait NoLink {}
 /// # Example
 ///
 /// ```
+/// use lunatic::protocol::{End, Protocol, Recv, Send};
+/// use lunatic::Process;
+///
 /// type AddProtocol = Recv<i32, Recv<i32, Send<i32, End>>>;
-/// let child = Process::spawn(1, |capture: i32, protocol: Protocol<AddProtocol>| {
+/// let child = Process::spawn_link(1, |capture: i32, protocol: Protocol<AddProtocol>| {
 ///     assert_eq!(capture, 1);
 ///     let (protocol, a) = protocol.receive();
 ///     let (protocol, b) = protocol.receive();

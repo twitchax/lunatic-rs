@@ -82,6 +82,7 @@ impl<T: 'static> fmt::Debug for ProcessLocal<T> {
 /// local. Publicity and attributes for each static are allowed. Example:
 ///
 /// ```
+/// use lunatic::process_local;
 /// use std::cell::RefCell;
 /// process_local! {
 ///     pub static FOO: RefCell<u32> = RefCell::new(1);
@@ -237,6 +238,7 @@ impl<T: 'static> ProcessLocal<Cell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::Cell;
     ///
     /// process_local! {
@@ -268,6 +270,7 @@ impl<T: 'static> ProcessLocal<Cell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::Cell;
     ///
     /// process_local! {
@@ -291,6 +294,7 @@ impl<T: 'static> ProcessLocal<Cell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::Cell;
     ///
     /// process_local! {
@@ -315,6 +319,7 @@ impl<T: 'static> ProcessLocal<Cell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::Cell;
     ///
     /// process_local! {
@@ -342,6 +347,7 @@ impl<T: 'static> ProcessLocal<RefCell<T>> {
     /// # Example
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::RefCell;
     ///
     /// process_local! {
@@ -369,13 +375,14 @@ impl<T: 'static> ProcessLocal<RefCell<T>> {
     /// # Example
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::RefCell;
     ///
     /// process_local! {
     ///     static X: RefCell<Vec<i32>> = RefCell::new(Vec::new());
     /// }
     ///
-    /// X.with_borrow_mut(|v| v.push(1));
+    /// X.with_borrow_mut(|mut v| v.push(1));
     ///
     /// X.with_borrow(|v| assert_eq!(*v, vec![1]));
     /// ```
@@ -399,6 +406,7 @@ impl<T: 'static> ProcessLocal<RefCell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::RefCell;
     ///
     /// process_local! {
@@ -434,13 +442,14 @@ impl<T: 'static> ProcessLocal<RefCell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::RefCell;
     ///
     /// process_local! {
     ///     static X: RefCell<Vec<i32>> = RefCell::new(Vec::new());
     /// }
     ///
-    /// X.with_borrow_mut(|v| v.push(1));
+    /// X.with_borrow_mut(|mut v| v.push(1));
     ///
     /// let a = X.take();
     ///
@@ -464,6 +473,7 @@ impl<T: 'static> ProcessLocal<RefCell<T>> {
     /// # Examples
     ///
     /// ```
+    /// use lunatic::process_local;
     /// use std::cell::RefCell;
     ///
     /// process_local! {

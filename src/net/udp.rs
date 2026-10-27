@@ -35,8 +35,7 @@ use crate::host;
 /// ```no_run
 /// use lunatic::net::UdpSocket;
 ///
-/// #[lunatic::main]
-/// fn main(_: Mailbox<()>) -> std::io::Result<()> {
+/// fn main() -> std::io::Result<()> {
 ///     {
 ///         let socket = UdpSocket::bind("127.0.0.1:34254")?;
 ///
@@ -48,7 +47,7 @@ use crate::host;
 ///         // Redeclare `buf` as slice of the received data and send reverse data back to origin.
 ///         let buf = &mut buf[..amt];
 ///         buf.reverse();
-///         socket.send_to(buf, &src)?;
+///         socket.send_to(buf, src)?;
 ///     } // the socket is closed here
 ///     Ok(())
 /// }

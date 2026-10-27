@@ -17,12 +17,6 @@ msgpack_serializer = ["rmp-serde"]
 protobuf_serializer = ["protobuf"]
 sqlite = ["lunatic-sqlite-api"]
 
-[lib]
-# Doc examples have never been compiled: cargo skipped doctests for non-host
-# targets until Rust 1.89, and many are fragments that don't build. Re-enable
-# once they are fixed up.
-doctest = false
-
 [dependencies]
 thiserror = "2.0"
 rustversion = "1.0"

@@ -55,6 +55,21 @@ use crate::{host, MailboxResult, Process, ProcessConfig, ProcessName, Tag};
 /// has access to the internal state of the abstract process.
 ///
 /// ```rust
+/// use lunatic::ap::{MessageHandler, State};
+/// # use lunatic::ap::handlers::Message;
+/// # use lunatic::ap::{AbstractProcess, Config};
+/// # struct Counter(u32);
+/// # impl AbstractProcess for Counter {
+/// #     type State = Self;
+/// #     type Serializer = lunatic::serializer::Bincode;
+/// #     type Arg = ();
+/// #     type Handlers = (Message<Increment>,);
+/// #     type StartupError = ();
+/// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+/// #         Ok(Counter(0))
+/// #     }
+/// # }
+///
 /// #[derive(serde::Serialize, serde::Deserialize)]
 /// struct Increment;
 /// impl MessageHandler<Increment> for Counter {
@@ -69,6 +84,21 @@ use crate::{host, MailboxResult, Process, ProcessConfig, ProcessName, Tag};
 /// response.
 ///
 /// ```rust
+/// use lunatic::ap::{RequestHandler, State};
+/// # use lunatic::ap::handlers::Request;
+/// # use lunatic::ap::{AbstractProcess, Config};
+/// # struct Counter(u32);
+/// # impl AbstractProcess for Counter {
+/// #     type State = Self;
+/// #     type Serializer = lunatic::serializer::Bincode;
+/// #     type Arg = ();
+/// #     type Handlers = (Request<Count>,);
+/// #     type StartupError = ();
+/// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+/// #         Ok(Counter(0))
+/// #     }
+/// # }
+///
 /// #[derive(serde::Serialize, serde::Deserialize)]
 /// struct Count;
 /// impl RequestHandler<Count> for Counter {
@@ -83,10 +113,27 @@ use crate::{host, MailboxResult, Process, ProcessConfig, ProcessName, Tag};
 /// immediate and can be even delegated to a 3rd process.
 ///
 /// ```rust
+/// use lunatic::ap::{DeferredRequestHandler, DeferredResponse, State};
+/// # use lunatic::ap::handlers::DeferredRequest;
+/// # use lunatic::ap::{AbstractProcess, Config};
+/// # struct Counter(u32);
+/// # impl AbstractProcess for Counter {
+/// #     type State = Self;
+/// #     type Serializer = lunatic::serializer::Bincode;
+/// #     type Arg = ();
+/// #     type Handlers = (DeferredRequest<Count>,);
+/// #     type StartupError = ();
+/// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+/// #         Ok(Counter(0))
+/// #     }
+/// # }
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Count;
+///
 /// impl DeferredRequestHandler<Count> for Counter {
 ///     type Response = u32;
-///     fn handle(_: State<Self>, _: String, dr: DeferredResponse<Self::Response, Self>) {
-///         dr.send_response(u32);
+///     fn handle(state: State<Self>, _: Count, dr: DeferredResponse<Self::Response, Self>) {
+///         dr.send_response(state.0);
 ///     }
 /// }
 /// ```
@@ -95,7 +142,43 @@ use crate::{host, MailboxResult, Process, ProcessConfig, ProcessName, Tag};
 /// associated with the `AbstractProcess` using the [`Self::Handlers`] type:_
 ///
 /// ```rust
+/// # use lunatic::ap::handlers::{DeferredRequest, Message, Request};
+/// # use lunatic::ap::{
+/// #     AbstractProcess, Config, DeferredRequestHandler, DeferredResponse, MessageHandler,
+/// #     RequestHandler, State,
+/// # };
+/// # struct Counter(u32);
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Increment;
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Count;
+/// # impl MessageHandler<Increment> for Counter {
+/// #     fn handle(mut state: State<Self>, _: Increment) {
+/// #         state.0 += 1;
+/// #     }
+/// # }
+/// # impl RequestHandler<Count> for Counter {
+/// #     type Response = u32;
+/// #     fn handle(state: State<Self>, _: Count) -> u32 {
+/// #         state.0
+/// #     }
+/// # }
+/// # impl DeferredRequestHandler<Count> for Counter {
+/// #     type Response = u32;
+/// #     fn handle(state: State<Self>, _: Count, dr: DeferredResponse<u32, Self>) {
+/// #         dr.send_response(state.0);
+/// #     }
+/// # }
+/// # impl AbstractProcess for Counter {
+/// #     type State = Self;
+/// #     type Serializer = lunatic::serializer::Bincode;
+/// #     type Arg = ();
+/// #     type StartupError = ();
+/// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+/// #         Ok(Counter(0))
+/// #     }
 /// type Handlers = (Message<Increment>, Request<Count>, DeferredRequest<Count>);
+/// # }
 /// ```
 ///
 /// ### Shutdown
@@ -156,12 +239,68 @@ where
     /// They are defined as a tuple and wrapped into `Message`, `Request` and
     /// `DeferredRequest` wrappers.
     /// ```
+    /// # use lunatic::ap::handlers::{Message, Request};
+    /// # use lunatic::ap::{AbstractProcess, Config, MessageHandler, RequestHandler, State};
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler1;
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler2;
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler3;
+    /// # struct Ap;
+    /// # impl MessageHandler<Handler1> for Ap {
+    /// #     fn handle(_: State<Self>, _: Handler1) {}
+    /// # }
+    /// # impl MessageHandler<Handler2> for Ap {
+    /// #     fn handle(_: State<Self>, _: Handler2) {}
+    /// # }
+    /// # impl RequestHandler<Handler3> for Ap {
+    /// #     type Response = ();
+    /// #     fn handle(_: State<Self>, _: Handler3) {}
+    /// # }
+    /// # impl AbstractProcess for Ap {
+    /// #     type State = Self;
+    /// #     type Serializer = lunatic::serializer::Bincode;
+    /// #     type Arg = ();
+    /// #     type StartupError = ();
+    /// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+    /// #         Ok(Ap)
+    /// #     }
     /// type Handlers = (Message<Handler1>, Message<Handler2>, Request<Handler3>);
+    /// # }
     /// ```
     ///
     /// Even if there is only one handler, it needs to be defined as a tuple.
     /// ```
+    /// # use lunatic::ap::handlers::{Message, Request};
+    /// # use lunatic::ap::{AbstractProcess, Config, MessageHandler, RequestHandler, State};
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler1;
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler2;
+    /// # #[derive(serde::Serialize, serde::Deserialize)]
+    /// # struct Handler3;
+    /// # struct Ap;
+    /// # impl MessageHandler<Handler1> for Ap {
+    /// #     fn handle(_: State<Self>, _: Handler1) {}
+    /// # }
+    /// # impl MessageHandler<Handler2> for Ap {
+    /// #     fn handle(_: State<Self>, _: Handler2) {}
+    /// # }
+    /// # impl RequestHandler<Handler3> for Ap {
+    /// #     type Response = ();
+    /// #     fn handle(_: State<Self>, _: Handler3) {}
+    /// # }
+    /// # impl AbstractProcess for Ap {
+    /// #     type State = Self;
+    /// #     type Serializer = lunatic::serializer::Bincode;
+    /// #     type Arg = ();
+    /// #     type StartupError = ();
+    /// #     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+    /// #         Ok(Ap)
+    /// #     }
     /// type Handlers = (Message<Handler1>,);
+    /// # }
     /// ```
     type Handlers: Handlers<Self>;
 

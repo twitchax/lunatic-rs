@@ -111,7 +111,7 @@ pub use udp::UdpSocket;
 /// use lunatic::net::ToSocketAddrs;
 ///
 /// let err = "127.0.0.1".to_socket_addrs().unwrap_err();
-/// assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+/// assert_eq!(err.kind(), io::ErrorKind::Other);
 /// ```
 ///
 /// [`TcpStream::connect`] is an example of an function that utilizes

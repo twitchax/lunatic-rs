@@ -2,9 +2,10 @@
 //!
 //! # Example
 //!
-//! ```
+//! ```no_run
 //! use lunatic::sqlite::{SqliteClient, Query};
 //!
+//! # fn main() -> Result<(), lunatic::sqlite::SqliteError> {
 //! let client = SqliteClient::connect("app.db")?;
 //!
 //! // Query users
@@ -12,6 +13,8 @@
 //! for row in rows {
 //!     // ...
 //! }
+//! # Ok(())
+//! # }
 //! ```
 
 mod client;

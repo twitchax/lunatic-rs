@@ -9,6 +9,8 @@
 /// # Example
 ///
 /// ```
+/// use lunatic::ProcessName;
+///
 /// #[derive(ProcessName)]
 /// struct LoggingProcess;
 ///
@@ -19,6 +21,8 @@
 /// Alternatively, you can implement the trait manually.
 ///
 /// ```
+/// use lunatic::ProcessName;
+///
 /// struct LoggingProcess;
 ///
 /// impl ProcessName for LoggingProcess {

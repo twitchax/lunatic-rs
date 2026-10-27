@@ -26,6 +26,8 @@ macro_rules! spawn_link_config {
 /// # Example
 ///
 /// ```
+/// use lunatic::{spawn, ProcessConfig};
+///
 /// // Background process
 /// spawn!(|| {});
 /// // Mailbox process
@@ -95,6 +97,9 @@ macro_rules! spawn {
 /// # Example
 ///
 /// ```
+/// use lunatic::protocol::End;
+/// use lunatic::{spawn_link, ProcessConfig};
+///
 /// // Background process
 /// spawn_link!(|| {});
 /// // Mailbox process

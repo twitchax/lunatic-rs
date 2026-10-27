@@ -63,9 +63,10 @@ pub enum DecodeError {
 /// `serde::Deserialize` traits. We can express this dependency in the following
 /// way:
 ///
-/// ```no_run
-/// impl<M: serde::Serialize + serde::Deserialize> Serializer<M> for Bincode {
-///     fn encode(message: M) -> Error {
+// ignore: illustrative; downstream code can't implement `CanSerialize` for `Bincode`.
+/// ```ignore
+/// impl<M: serde::Serialize + serde::de::DeserializeOwned> CanSerialize<M> for Bincode {
+///     fn encode(message: &M) -> Result<(), EncodeError> {
 ///         // `message` is guaranteed to implement the `serde::Serialize`
 ///         // trait and can be encoded here using `Bincode`.
 ///     }

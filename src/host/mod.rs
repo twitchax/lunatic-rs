@@ -126,10 +126,14 @@ pub fn send_receive_skip_search(node: u64, process_id: u64, wait_on_tag: i64, ti
 /// # Example
 ///
 /// ```no_run
+/// use lunatic::host::call_host_alloc;
+/// # unsafe fn some_allocating_fn(_len_ptr: *mut u32) -> u32 { unimplemented!() }
+///
+/// #[derive(serde::Deserialize)]
 /// struct Foo { a: String }
 ///
 /// let foo = call_host_alloc::<Foo>(|len_ptr| unsafe {
-///     lunatic::host::some_allocating_fn(len_ptr)
+///     some_allocating_fn(len_ptr)
 /// }).unwrap();
 /// ```
 #[doc(hidden)]

@@ -57,7 +57,7 @@ cargo build --release --target=wasm32-wasip1
 This will generate a .wasm file in the `target/wasm32-wasip1/release/` folder inside your project.
 You can now run your application by passing the generated .wasm file to Lunatic, e.g:
 
-```ignore
+```bash
 lunatic run target/wasm32-wasip1/release/<name>.wasm
 ```
 
@@ -75,7 +75,7 @@ runner = "lunatic run"
 ```
 
 or inside of your Cargo project just run:
-```
+```bash
 lunatic init
 ```
 This will automatically crate the file above.
