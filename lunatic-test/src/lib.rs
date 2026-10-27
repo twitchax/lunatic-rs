@@ -3,6 +3,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 
 /// Marks function to be executed by the lunatic runtime as a unit test. This is
@@ -18,25 +19,20 @@ pub fn test(_args: TokenStream, item: TokenStream) -> TokenStream {
     let mut should_panic = None;
     let mut ignore = "";
     for attribute in attributes.iter() {
-        if let Some(ident) = attribute.path.get_ident() {
+        if let Some(ident) = attribute.path().get_ident() {
             if ident == "ignore" {
                 ignore = "#ignore_";
             }
             if ident == "should_panic" {
                 // Common error message
                 let error = syn::Error::new_spanned(
-                    &attribute.tokens,
+                    &attribute.meta,
                     "argument must be of the form: `expected = \"error message\"`",
                 )
                 .to_compile_error()
                 .into();
 
-                let attribute_args = match attribute.parse_meta() {
-                    Ok(args) => args,
-                    Err(_) => return error,
-                };
-
-                let attribute_args = match attribute_args {
+                let attribute_args = match &attribute.meta {
                     syn::Meta::List(attribute_args) => attribute_args,
                     syn::Meta::Path(_) => {
                         // Match any panic if no expected value is provided
@@ -46,20 +42,30 @@ pub fn test(_args: TokenStream, item: TokenStream) -> TokenStream {
                     _ => return error,
                 };
 
+                let attribute_args = match attribute_args
+                    .parse_args_with(Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated)
+                {
+                    Ok(args) => args,
+                    Err(_) => return error,
+                };
+
                 // should_panic can have at most one argument
-                if attribute_args.nested.len() > 1 {
+                if attribute_args.len() > 1 {
                     return error;
                 }
                 // The first argument can only be in the format 'expected = "partial matcher"'
-                if let Some(argument) = attribute_args.nested.iter().next() {
+                if let Some(argument) = attribute_args.iter().next() {
                     match argument {
-                        syn::NestedMeta::Meta(syn::Meta::NameValue(name_value)) => {
+                        syn::Meta::NameValue(name_value) => {
                             if let Some(ident) = name_value.path.get_ident() {
                                 if ident != "expected" {
                                     return error;
                                 }
-                                match &name_value.lit {
-                                    syn::Lit::Str(lit) => {
+                                match &name_value.value {
+                                    syn::Expr::Lit(syn::ExprLit {
+                                        lit: syn::Lit::Str(lit),
+                                        ..
+                                    }) => {
                                         // Mark function as should_panic
                                         should_panic = Some(lit.value())
                                     }

@@ -15,17 +15,17 @@ pub struct AbstractProcess {
     /// Arg type in abstract process implementation.
     arg_ty: syn::Type,
     /// `init` method.
-    init: syn::ImplItemMethod,
+    init: syn::ImplItemFn,
     /// Terminate method.
-    terminate: Option<syn::ImplItemMethod>,
+    terminate: Option<syn::ImplItemFn>,
     /// Handle link died method.
-    handle_link_death: Option<syn::ImplItemMethod>,
+    handle_link_death: Option<syn::ImplItemFn>,
     /// Message handler methods.
-    message_handlers: Vec<syn::ImplItemMethod>,
+    message_handlers: Vec<syn::ImplItemFn>,
     /// Request handler methods.
-    request_handlers: Vec<syn::ImplItemMethod>,
+    request_handlers: Vec<syn::ImplItemFn>,
     /// Deferred request handler methods.
-    deferred_request_handlers: Vec<syn::ImplItemMethod>,
+    deferred_request_handlers: Vec<syn::ImplItemFn>,
     /// Name of trait wrapping messages
     message_trait_name: syn::Ident,
     /// Name of trait wrapping requests
@@ -67,7 +67,7 @@ impl AbstractProcess {
             .into_iter()
             .enumerate()
             .filter_map(|(i, item)| match item {
-                syn::ImplItem::Method(impl_item_method) => Some((i, impl_item_method)),
+                syn::ImplItem::Fn(impl_item_method) => Some((i, impl_item_method)),
                 _ => None,
             })
             .filter_map(|(i, mut impl_item_method)| {
@@ -77,7 +77,7 @@ impl AbstractProcess {
                         .iter()
                         .enumerate()
                         .find_map(|(i, attr)| {
-                            attr.path
+                            attr.path()
                                 .get_ident()
                                 .map(|ident| ident.to_string())
                                 .and_then(|ident_string| ItemAttr::from_str(&ident_string))
@@ -85,8 +85,7 @@ impl AbstractProcess {
                         })?;
                 // We found an attribute, we should remove it from the original item_impl
                 impl_item_method.attrs.remove(j);
-                if let syn::ImplItem::Method(impl_item_method) = item_impl.items.get_mut(i).unwrap()
-                {
+                if let syn::ImplItem::Fn(impl_item_method) = item_impl.items.get_mut(i).unwrap() {
                     impl_item_method.attrs.remove(j);
                 }
 
@@ -251,7 +250,7 @@ impl AbstractProcess {
     /// ```
     fn expand_handler_wrapper(
         &self,
-        impl_item_method: &syn::ImplItemMethod,
+        impl_item_method: &syn::ImplItemFn,
         exclude_last: bool,
     ) -> TokenStream {
         let vis = &self.args.visibility;
@@ -287,7 +286,7 @@ impl AbstractProcess {
     fn expand_original_impl(&self) -> TokenStream {
         let syn::ItemImpl {
             attrs,
-            defaultness,
+            modifiers,
             unsafety,
             impl_token,
             generics,
@@ -295,6 +294,7 @@ impl AbstractProcess {
             items,
             ..
         } = &self.item_impl;
+        let defaultness = &modifiers.defaultness;
         let (impl_generics, _ty_generics, where_clause) = generics.split_for_impl();
 
         quote! {
@@ -436,7 +436,7 @@ impl AbstractProcess {
     /// wrapper types.
     fn expand_message_handler_impls(&self) -> TokenStream {
         let message_handler_impls = self.message_handlers.iter().map(|message_handler| {
-            let syn::ImplItemMethod {
+            let syn::ImplItemFn {
                 attrs,
                 sig,
                 ..
@@ -471,7 +471,7 @@ impl AbstractProcess {
     /// wrapper types.
     fn expand_request_handler_impls(&self) -> TokenStream {
         let request_handler_impls = self.request_handlers.iter().map(|request_handler| {
-            let syn::ImplItemMethod {
+            let syn::ImplItemFn {
                 attrs,
                 sig,
                 ..
@@ -514,7 +514,7 @@ impl AbstractProcess {
     /// request handler wrapper types.
     fn expand_deferred_request_handler_impls(&self) -> TokenStream {
         let request_handler_impls = self.deferred_request_handlers.iter().map(|request_handler| {
-            let syn::ImplItemMethod {
+            let syn::ImplItemFn {
                 attrs,
                 sig,
                 ..
@@ -998,8 +998,8 @@ struct HandlerStructure<'a> {
 }
 
 impl<'a> HandlerStructure<'a> {
-    fn from_handler((handler, is_deferred): (&'a syn::ImplItemMethod, bool)) -> Self {
-        let syn::ImplItemMethod { attrs, sig, .. } = handler;
+    fn from_handler((handler, is_deferred): (&'a syn::ImplItemFn, bool)) -> Self {
+        let syn::ImplItemFn { attrs, sig, .. } = handler;
         let syn::Signature {
             ident,
             inputs,
