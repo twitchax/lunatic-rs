@@ -1,7 +1,9 @@
 #![allow(clippy::let_unit_value)]
 #![allow(clippy::unit_arg)]
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 use lunatic::serializer::CanSerialize;
 use serde::{Deserialize, Serialize};
 
