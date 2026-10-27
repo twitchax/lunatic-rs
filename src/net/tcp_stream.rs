@@ -159,7 +159,7 @@ impl TcpStream {
             }
         }
         let lunatic_error = LunaticError::Error(id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Returns the remote address this socket is connected to.
@@ -174,7 +174,7 @@ impl TcpStream {
             Ok(addr)
         } else {
             let lunatic_error = LunaticError::Error(dns_iter_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -278,7 +278,7 @@ impl TcpStream {
             Err(Error::new(ErrorKind::TimedOut, "TcpStream peek timed out"))
         } else {
             let lunatic_error = LunaticError::Error(nread_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 }
@@ -305,7 +305,7 @@ impl Write for TcpStream {
             Err(Error::new(ErrorKind::TimedOut, "TcpStream write timed out"))
         } else {
             let lunatic_error = LunaticError::Error(nwritten_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -315,7 +315,7 @@ impl Write for TcpStream {
             0 => Ok(()),
             _ => {
                 let lunatic_error = LunaticError::Error(error_id);
-                Err(Error::new(ErrorKind::Other, lunatic_error))
+                Err(Error::other(lunatic_error))
             }
         }
     }
@@ -338,7 +338,7 @@ impl Read for TcpStream {
             Err(Error::new(ErrorKind::TimedOut, "TcpStream read timed out"))
         } else {
             let lunatic_error = LunaticError::Error(nread_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 }

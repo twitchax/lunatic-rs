@@ -1,5 +1,7 @@
 [build]
-target = "wasm32-wasi"
+target = "wasm32-wasip1"
 
-[target.wasm32-wasi]
-runner = "lunatic run"
+# Expects the lunatic runtime repo checked out as a sibling of this one; the
+# path resolves relative to this repo's root, not the working directory.
+[target.wasm32-wasip1]
+runner = "../lunatic/target/release/lunatic run"

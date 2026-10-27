@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, Result};
 use std::net::SocketAddr;
 
 use super::SocketAddrIterator;
@@ -106,7 +106,7 @@ impl TcpListener {
             }
         }
         let lunatic_error = LunaticError::Error(id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Accepts a new incoming connection.
@@ -132,7 +132,7 @@ impl TcpListener {
             Ok((tcp_stream, peer))
         } else {
             let lunatic_error = LunaticError::Error(tcp_stream_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -151,7 +151,7 @@ impl TcpListener {
             Ok(addr)
         } else {
             let lunatic_error = LunaticError::Error(dns_iter_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 }

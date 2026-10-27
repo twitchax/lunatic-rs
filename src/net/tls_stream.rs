@@ -167,7 +167,7 @@ impl TlsStream {
             return Ok(TlsStream::from(id));
         }
         let lunatic_error = LunaticError::Error(id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Sets write timeout for TlsStream
@@ -247,7 +247,7 @@ impl Write for TlsStream {
             Err(Error::new(ErrorKind::TimedOut, "TlsStream write timed out"))
         } else {
             let lunatic_error = LunaticError::Error(nwritten_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -257,7 +257,7 @@ impl Write for TlsStream {
             0 => Ok(()),
             _ => {
                 let lunatic_error = LunaticError::Error(error_id);
-                Err(Error::new(ErrorKind::Other, lunatic_error))
+                Err(Error::other(lunatic_error))
             }
         }
     }
@@ -280,7 +280,7 @@ impl Read for TlsStream {
             Err(Error::new(ErrorKind::TimedOut, "TlsStream read timed out"))
         } else {
             let lunatic_error = LunaticError::Error(nread_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 }

@@ -295,9 +295,7 @@ where
     S: CanSerialize<M>,
 {
     fn clone(&self) -> Self {
-        Self {
-            phantom: self.phantom,
-        }
+        *self
     }
 }
 
@@ -479,7 +477,7 @@ where
                     // Processes can only receive one type of message, but to pass in the captured
                     // variable we pretend for the first message that our process is receiving
                     // messages of type `C`.
-                    Ok(unsafe { std::mem::transmute(child) })
+                    Ok(unsafe { std::mem::transmute::<Process<C, S>, Process<M, S>>(child) })
                 }
             }
             Err(err) => Err(err),

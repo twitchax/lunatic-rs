@@ -246,12 +246,13 @@ pub enum SqliteCode {
     /// might arise:
     ///
     /// 1.  Process A starts a read transaction on the database and does one or
-    /// more SELECT statement. Process A keeps the transaction open.
+    ///     more SELECT statement. Process A keeps the transaction open.
     /// 2.  Process B updates the database, changing values previous read by
-    /// process A. 3.  Process A now tries to write to the database. But
-    /// process A's view of the database content is now obsolete because process
-    /// B has modified the database file after process A read from it. Hence
-    /// process A gets an SQLITE_BUSY_SNAPSHOT error.
+    ///     process A.
+    /// 3.  Process A now tries to write to the database. But process A's view
+    ///     of the database content is now obsolete because process B has
+    ///     modified the database file after process A read from it. Hence
+    ///     process A gets an SQLITE_BUSY_SNAPSHOT error.
     BusySnapshot = 517,
     /// The SQLITE_LOCKED_VTAB result code is not used by the SQLite core, but
     /// it is available for use by extensions. Virtual table implementations can

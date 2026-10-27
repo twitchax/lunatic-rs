@@ -15,11 +15,11 @@ function.
 ### Process types:
 
 * **[`Process`]** - A process that can receive messages through a [`Mailbox`] or
-    [`Protocol`](protocol::Protocol).
+  [`Protocol`](protocol::Protocol).
 * **[`AbstractProcess`](AbstractProcess)** - Abstracts state management and message/request
-    handling.
+  handling.
 * **[`Supervisor`](supervisor::Supervisor)** - A process that can supervise others and re-spawn
-    them if they fail.
+  them if they fail.
 
 ### Linking
 
@@ -45,20 +45,20 @@ cargo install lunatic-runtime
 
 [Lunatic][1] applications need to be compiled to [WebAssembly][2] before they can be executed by
 the runtime. Rust has great support for WebAssembly and you can build a lunatic compatible
-application just by passing the `--target=wasm32-wasi` flag to cargo, e.g:
+application just by passing the `--target=wasm32-wasip1` flag to cargo, e.g:
 
 ```bash
 # Add the WebAssembly target
-rustup target add wasm32-wasi
+rustup target add wasm32-wasip1
 # Build the app
-cargo build --release --target=wasm32-wasi
+cargo build --release --target=wasm32-wasip1
 ```
 
-This will generate a .wasm file in the `target/wasm32-wasi/release/` folder inside your project.
+This will generate a .wasm file in the `target/wasm32-wasip1/release/` folder inside your project.
 You can now run your application by passing the generated .wasm file to Lunatic, e.g:
 
 ```ignore
-lunatic run target/wasm32-wasi/release/<name>.wasm
+lunatic run target/wasm32-wasip1/release/<name>.wasm
 ```
 
 #### Better developer experience
@@ -68,9 +68,9 @@ To simplify developing, testing and running lunatic applications with cargo, you
 
 ```toml
 [build]
-target = "wasm32-wasi"
+target = "wasm32-wasip1"
 
-[target.wasm32-wasi]
+[target.wasm32-wasip1]
 runner = "lunatic run"
 ```
 

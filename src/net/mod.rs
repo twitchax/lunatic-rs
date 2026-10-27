@@ -7,7 +7,7 @@ mod tls_listener;
 mod tls_stream;
 mod udp;
 
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Error, Result};
 use std::iter::Cloned;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::option::IntoIter;
@@ -139,7 +139,7 @@ impl ToSocketAddrs for &str {
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
         match resolve(self) {
             Ok(iter) => Ok(iter),
-            Err(err) => Err(Error::new(ErrorKind::Other, err)),
+            Err(err) => Err(Error::other(err)),
         }
     }
 }
@@ -150,7 +150,7 @@ impl ToSocketAddrs for String {
     fn to_socket_addrs(&self) -> Result<Self::Iter> {
         match resolve(self) {
             Ok(iter) => Ok(iter),
-            Err(err) => Err(Error::new(ErrorKind::Other, err)),
+            Err(err) => Err(Error::other(err)),
         }
     }
 }

@@ -126,7 +126,7 @@ impl UdpSocket {
             }
         }
         let lunatic_error = LunaticError::Error(id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Returns the local address that this UdpSocket is bound to.
@@ -144,7 +144,7 @@ impl UdpSocket {
             Ok(addr)
         } else {
             let lunatic_error = LunaticError::Error(dns_iter_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -162,7 +162,7 @@ impl UdpSocket {
             Err(Error::new(ErrorKind::NotConnected, "not connected"))
         } else {
             let lunatic_error = LunaticError::Error(dns_iter_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -242,7 +242,7 @@ impl UdpSocket {
             }
         }
         let lunatic_error = LunaticError::Error(id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Sends data on the socket to the remote address to which it is connected.
@@ -273,7 +273,7 @@ impl UdpSocket {
             Ok(nsend_or_error_id as usize)
         } else {
             let lunatic_error = LunaticError::Error(nsend_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -346,7 +346,7 @@ impl UdpSocket {
             }
         }
         let lunatic_error = LunaticError::Error(nsend_or_error_id);
-        Err(Error::new(ErrorKind::Other, lunatic_error))
+        Err(Error::other(lunatic_error))
     }
 
     /// Receives a single datagram message on the socket from the remote address
@@ -387,7 +387,7 @@ impl UdpSocket {
             Ok(nrecv_or_error_id as usize)
         } else {
             let lunatic_error = LunaticError::Error(nrecv_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 
@@ -427,7 +427,7 @@ impl UdpSocket {
             Ok((nrecv_or_error_id as usize, peer))
         } else {
             let lunatic_error = LunaticError::Error(nrecv_or_error_id);
-            Err(Error::new(ErrorKind::Other, lunatic_error))
+            Err(Error::other(lunatic_error))
         }
     }
 

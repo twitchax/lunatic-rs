@@ -17,6 +17,12 @@ msgpack_serializer = ["rmp-serde"]
 protobuf_serializer = ["protobuf"]
 sqlite = ["lunatic-sqlite-api"]
 
+[lib]
+# Doc examples have never been compiled: cargo skipped doctests for non-host
+# targets until Rust 1.89, and many are fragments that don't build. Re-enable
+# once they are fixed up.
+doctest = false
+
 [dependencies]
 thiserror = "1.0"
 rustversion = "1.0"
@@ -53,6 +59,6 @@ required-features = ["sqlite"]
 members = ["lunatic-macros", "lunatic-test", "lunatic-sys"]
 
 [package.metadata.docs.rs]
-targets = ["wasm32-wasi"]
+targets = ["wasm32-wasip1"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

@@ -228,7 +228,7 @@ where
     }
 
     /// Allows for spawning the process with a specific configuration.
-    fn configure(config: &ProcessConfig) -> AbstractProcessBuilder<Self> {
+    fn configure(config: &ProcessConfig) -> AbstractProcessBuilder<'_, Self> {
         AbstractProcessBuilder::new().configure(config)
     }
 
@@ -375,6 +375,11 @@ where
     T: AbstractProcess,
 {
     /// Construct a process from a raw ID.
+    ///
+    /// # Safety
+    ///
+    /// When creating a process from raw IDs you will need to manually specify
+    /// the right types.
     pub unsafe fn new(node_id: u64, process_id: u64) -> Self {
         let process = Process::new(node_id, process_id);
         ProcessRef { process }
@@ -635,9 +640,7 @@ where
     T: AbstractProcess,
 {
     fn clone(&self) -> Self {
-        ProcessRef {
-            process: self.process,
-        }
+        *self
     }
 }
 
@@ -675,7 +678,7 @@ where
             Self::InitPanicked => write!(f, "InitPanicked"),
             Self::NameAlreadyRegistered(arg0) => {
                 f.debug_tuple("NameAlreadyRegistered").field(arg0).finish()
-            },
+            }
             Self::TimedOut => write!(f, "TimedOut"),
             Self::Custom(arg0) => f.debug_tuple("Custom").field(arg0).finish(),
         }

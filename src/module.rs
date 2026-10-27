@@ -1,5 +1,3 @@
-use std::u128;
-
 use serde::{Deserialize, Serialize};
 
 use crate::error::LunaticError;

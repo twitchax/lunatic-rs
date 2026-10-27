@@ -531,6 +531,7 @@ mod lazy {
             // The precondition also ensures that we are the only one accessing
             // `self` at the moment so replacing is fine.
             unsafe {
+                #[allow(clippy::mem_replace_option_with_some)]
                 let _ = mem::replace(&mut *ptr, Some(value));
             }
 
@@ -581,6 +582,7 @@ pub mod statik {
     }
 
     impl<T> Key<T> {
+        #[allow(clippy::new_without_default)]
         pub const fn new() -> Key<T> {
             Key {
                 inner: LazyKeyInner::new(),

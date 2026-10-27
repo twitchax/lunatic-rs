@@ -92,8 +92,8 @@ impl AbstractProcess {
 
                 Some((item_attr, impl_item_method))
             })
-            .fold(
-                Ok((None, None, None, Vec::new(), Vec::new(), Vec::new())),
+            .try_fold(
+                (None, None, None, Vec::new(), Vec::new(), Vec::new()),
                 |acc, (item_attr, impl_item_method)| {
                     let (
                         mut init,
@@ -102,7 +102,7 @@ impl AbstractProcess {
                         mut message_handlers,
                         mut request_handlers,
                         mut deferred_request_handlers,
-                    ) = acc?;
+                    ) = acc;
 
                     match item_attr {
                         ItemAttr::Init => {

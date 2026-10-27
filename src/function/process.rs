@@ -561,11 +561,7 @@ impl<M, S> std::fmt::Debug for Process<M, S> {
 
 impl<M, S> Clone for Process<M, S> {
     fn clone(&self) -> Self {
-        Self {
-            node_id: self.node_id,
-            id: self.id,
-            serializer_type: self.serializer_type,
-        }
+        *self
     }
 }
 

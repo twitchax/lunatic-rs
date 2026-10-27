@@ -20,7 +20,8 @@ pub fn catch_panic<R, F: FnOnce() -> R>(f: F) -> Result<R, Panicked> {
     let function = Box::new(f);
     let raw_function = Box::<F>::into_raw(function) as usize;
     let raw_result =
-        unsafe { host::api::trap::catch(re_entry::<R, F> as usize, raw_function) } as *mut R;
+        unsafe { host::api::trap::catch(re_entry::<R, F> as *const () as usize, raw_function) }
+            as *mut R;
     if raw_result.is_null() {
         Err(Panicked)
     } else {

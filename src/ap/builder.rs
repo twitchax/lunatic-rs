@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
 use super::{lifecycles, AbstractProcess, ProcessRef, StartupError};
-use crate::{function::process::{process_name, ProcessType}, MailboxError};
+use crate::{
+    function::process::{process_name, ProcessType},
+    MailboxError,
+};
 use crate::{LunaticError, Mailbox, Process, ProcessConfig, ProcessName, Tag};
-
-trait IntoAbstractProcessBuilder<T> {}
 
 /// Holds additional information about [`AbstractProcess`] spawning.
 ///
@@ -135,7 +136,11 @@ where
     /// `StartupError::Custom(error)`. If the `init` function panics during
     /// execution, it will return [`StartupError::InitPanicked`].
     #[track_caller]
-    pub fn start_timeout(&self, arg: T::Arg, timeout: std::time::Duration) -> Result<ProcessRef<T>, StartupError<T>> {
+    pub fn start_timeout(
+        &self,
+        arg: T::Arg,
+        timeout: std::time::Duration,
+    ) -> Result<ProcessRef<T>, StartupError<T>> {
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);

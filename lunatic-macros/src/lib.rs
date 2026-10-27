@@ -54,7 +54,7 @@ pub fn main(_args: TokenStream, item: TokenStream) -> TokenStream {
 /// minimum boilerplate code.
 ///
 /// - Use `#[init]`, `#[terminate]`, and `#[handle_link_trapped]` attributes to
-/// specify methods for implementing [`AbstractProcess`].
+///   specify methods for implementing [`AbstractProcess`].
 /// - Use `#[handle_message]`, `#[handle_request]` and
 ///   `#[handle_deferred_request]` attributes to specify message and request
 ///   handlers.
