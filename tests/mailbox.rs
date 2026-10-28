@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use lunatic::{test, Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal};
+use lunatic::{sleep, test, Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal};
 
 #[test]
 fn monitor(mailbox: Mailbox<()>) {
@@ -12,6 +12,25 @@ fn monitor(mailbox: Mailbox<()>) {
     match mailbox.receive_timeout(Duration::from_secs(1)) {
         Ok(MessageSignal::Signal(ProcessDiedSignal(id))) => assert_eq!(id, child.id()),
         other => panic!("expected the child's death, got {other:?}"),
+    }
+}
+
+#[test]
+fn monitor_exited_process(mailbox: Mailbox<()>) {
+    let mailbox = mailbox.monitorable();
+    let child = Process::spawn((), |_, _: Mailbox<()>| {});
+    // Wait until the runtime has removed it.
+    for _ in 0..1_000 {
+        if !child.is_alive() {
+            break;
+        }
+        sleep(Duration::from_millis(1));
+    }
+    assert!(!child.is_alive());
+    mailbox.monitor(child);
+    match mailbox.receive_timeout(Duration::from_secs(1)) {
+        Ok(MessageSignal::Signal(ProcessDiedSignal(id))) => assert_eq!(id, child.id()),
+        other => panic!("expected the exited child's death, got {other:?}"),
     }
 }
 

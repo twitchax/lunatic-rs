@@ -235,10 +235,9 @@ where
     /// Starts monitoring a process.
     ///
     /// A [`ProcessDiedSignal`] arrives when the process exits for any reason,
-    /// after every message it sent to this process. For a remote process it
-    /// also arrives when its node goes down, and right away if the process
-    /// doesn't exist. For a local process that already exited, nothing
-    /// arrives.
+    /// after every message it sent to this process, and right away if the
+    /// process doesn't exist. For a remote process it also arrives when its
+    /// node goes down.
     pub fn monitor<T, U>(&self, process: Process<T, U>) {
         host::monitor(process.node_id(), process.id());
     }
