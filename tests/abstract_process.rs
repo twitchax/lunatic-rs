@@ -7,7 +7,10 @@ use lunatic::ap::{
 };
 use lunatic::serializer::Bincode;
 use lunatic::time::Timeout;
-use lunatic::{sleep, spawn_link, test, Mailbox, MailboxError, Process, ProcessConfig, Tag};
+use lunatic::{
+    sleep, spawn_link, test, LinkDiedSignal, Mailbox, MailboxError, MessageSignal, Process,
+    ProcessConfig, Tag,
+};
 
 /// This `AbstractProcess` always panics on `init`.
 struct InitPanicksAP;
@@ -294,6 +297,29 @@ fn unlinked_process_doesnt_fail() {
     ap.unlink();
     ap.send(Panick);
     sleep(Duration::from_millis(10));
+}
+
+#[test]
+fn linked_start_on_this_node_reports_failure(mailbox: Mailbox<()>) {
+    let mailbox = mailbox.catch_link_failure();
+    let tag = Tag::new();
+    let ap = PanicOnMessageAP::link_with(tag)
+        .on_node(lunatic::host::node_id())
+        .start(())
+        .unwrap();
+    ap.send(Panick);
+    match mailbox.receive_timeout(Duration::from_secs(1)) {
+        Ok(MessageSignal::Signal(LinkDiedSignal(died))) => assert_eq!(died, tag),
+        other => panic!("expected the link to report the failure, got {other:?}"),
+    }
+}
+
+#[test]
+#[should_panic(expected = "a linked start is not supported for remote processes")]
+fn linked_start_on_remote_node_is_refused() {
+    let _ = PanicOnMessageAP::link()
+        .on_node(lunatic::host::node_id() + 1)
+        .start(());
 }
 
 /// `AbstractProcess` that handles failed links

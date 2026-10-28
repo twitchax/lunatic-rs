@@ -69,7 +69,8 @@ where
     /// Sets the node on which the process will be spawned.
     ///
     /// If `node` is this node, the process is spawned locally: it shares the
-    /// spawner's registry, and no control node is needed.
+    /// spawner's registry, and no control node is needed. Only then can it be
+    /// combined with [`link`](Self::link).
     pub fn on_node(self, node: u64) -> AbstractProcessBuilder<'a, T> {
         AbstractProcessBuilder {
             link: self.link,
@@ -77,6 +78,11 @@ where
             node: Some(node),
             phantom: PhantomData,
         }
+    }
+
+    /// The node to spawn on, unless it's this one, which spawns locally.
+    fn remote_node(&self) -> Option<u64> {
+        self.node.filter(|&node| node != host::node_id())
     }
 
     /// Starts a new `AbstractProcess` and returns a reference to it.
@@ -90,9 +96,9 @@ where
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
-        let process = match (self.link, &self.config, self.node) {
+        let process = match (self.link, &self.config, self.remote_node()) {
             (Some(_), _, Some(_node)) => {
-                unimplemented!("Linking across nodes is not supported yet");
+                panic!("a linked start is not supported for remote processes");
             }
             (Some(tag), Some(config), None) => Process::<(), T::Serializer>::spawn_link_config_tag(
                 config,
@@ -158,9 +164,9 @@ where
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
-        let process = match (self.link, &self.config, self.node) {
+        let process = match (self.link, &self.config, self.remote_node()) {
             (Some(_), _, Some(_node)) => {
-                unimplemented!("Linking across nodes is not supported yet");
+                panic!("a linked start is not supported for remote processes");
             }
             (Some(tag), Some(config), None) => Process::<(), T::Serializer>::spawn_link_config_tag(
                 config,
@@ -266,9 +272,9 @@ where
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
-        let process = match (self.link, &self.config, self.node) {
+        let process = match (self.link, &self.config, self.remote_node()) {
             (Some(_), _, Some(_node)) => {
-                unimplemented!("Linking across nodes is not supported yet");
+                panic!("a linked start is not supported for remote processes");
             }
             (Some(tag), Some(config), None) => {
                 Process::<(), T::Serializer>::name_spawn_link_config_tag(
