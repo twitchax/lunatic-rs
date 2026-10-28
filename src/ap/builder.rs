@@ -67,6 +67,9 @@ where
     }
 
     /// Sets the node on which the process will be spawned.
+    ///
+    /// If `node` is this node, the process is spawned locally: it shares the
+    /// spawner's registry, and no control node is needed.
     pub fn on_node(self, node: u64) -> AbstractProcessBuilder<'a, T> {
         AbstractProcessBuilder {
             link: self.link,

@@ -206,6 +206,9 @@ impl<M, S> Process<M, S> {
     }
 
     /// Spawn a process on a remote node.
+    ///
+    /// If `node_id` is this node, this is a local spawn: the process shares the
+    /// spawner's registry, and no control node is needed.
     #[track_caller]
     pub fn spawn_node<C, T>(node_id: u64, capture: C, entry: fn(C, T)) -> T::Process
     where
@@ -232,6 +235,9 @@ impl<M, S> Process<M, S> {
     }
 
     /// Spawn a process on a remote node.
+    ///
+    /// If `node_id` is this node, this is a local spawn: the process shares the
+    /// spawner's registry, and no control node is needed.
     #[track_caller]
     pub fn spawn_node_config<C, T>(
         node_id: u64,

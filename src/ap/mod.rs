@@ -372,6 +372,9 @@ where
     }
 
     /// Sets the node on which the process will be spawned.
+    ///
+    /// If `node` is this node, the process is spawned locally: it shares the
+    /// spawner's registry, and no control node is needed.
     fn on_node(node: u64) -> AbstractProcessBuilder<'static, Self> {
         AbstractProcessBuilder::new().on_node(node)
     }

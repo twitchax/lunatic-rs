@@ -236,6 +236,15 @@ fn lookup() {
     assert!(doesnt_exist.is_ok());
 }
 
+#[test]
+fn start_as_on_this_node_registers_the_name() {
+    let node = lunatic::host::node_id();
+    let ap = RegisteredAP::on_node(node).start_as(&"AP", ()).unwrap();
+    assert_eq!(ProcessRef::<RegisteredAP>::lookup(&"AP"), Some(ap));
+    let exists = RegisteredAP::on_node(node).start_as(&"AP", ());
+    assert_eq!(exists, Err(StartupError::NameAlreadyRegistered(ap)));
+}
+
 /// `AbstractProcess` that can panic on message.
 struct PanicOnMessageAP;
 

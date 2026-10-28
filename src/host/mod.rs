@@ -16,6 +16,10 @@ use crate::{LunaticError, ProcessConfig, Tag};
 /// will be inherited. If link is `Some`, the newly crated process will be
 /// linked to the caller.
 ///
+/// Only a `node` other than this one goes through the distributed API. A spawn
+/// on this node is a plain local spawn, so it shares the caller's registry and
+/// works without a control node.
+///
 /// The function `entry` will be used as entry point into the process. It will
 /// be called with the argument `arg`.
 pub(crate) fn spawn(
@@ -36,8 +40,9 @@ pub(crate) fn spawn(
         None => 0,
     };
     let config_id = config.map_or_else(|| ProcessConfig::inherit().id(), |config| config.id());
+    let remote_node = node.filter(|&node| node != self::node_id());
     let result = unsafe {
-        if let Some(node) = node {
+        if let Some(node) = remote_node {
             api::distributed::spawn(
                 node,
                 config_id,

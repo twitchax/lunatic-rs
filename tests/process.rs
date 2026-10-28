@@ -82,6 +82,42 @@ fn lookup(mailbox: Mailbox<i32>) {
     assert_eq!(1337, mailbox.receive());
 }
 
+// A spawn on this node used to go through the distributed API, which traps
+// without a control node.
+#[test]
+fn spawn_node_on_this_node(m: Mailbox<u64>) {
+    let node = lunatic::host::node_id();
+    let child = Process::spawn_node(node, m.this(), |parent, _: Mailbox<()>| {
+        parent.send(lunatic::host::node_id());
+    });
+    assert_eq!(child.node_id(), node);
+    assert_eq!(m.receive_timeout(Duration::from_secs(1)).unwrap(), node);
+}
+
+#[test]
+fn spawn_node_config_on_this_node(m: Mailbox<u64>) {
+    let node = lunatic::host::node_id();
+    let config = ProcessConfig::new().unwrap();
+    let child = Process::spawn_node_config(node, &config, m.this(), |parent, _: Mailbox<()>| {
+        parent.send(lunatic::host::node_id());
+    });
+    assert_eq!(child.node_id(), node);
+    assert_eq!(m.receive_timeout(Duration::from_secs(1)).unwrap(), node);
+}
+
+#[test]
+fn spawn_node_on_this_node_shares_registry(m: Mailbox<bool>) {
+    m.this().register(&"spawn_node_parent");
+    Process::spawn_node(
+        lunatic::host::node_id(),
+        m.this(),
+        |parent, _: Mailbox<()>| {
+            parent.send(Process::<bool>::lookup(&"spawn_node_parent").is_some());
+        },
+    );
+    assert!(m.receive_timeout(Duration::from_secs(1)).unwrap());
+}
+
 #[test]
 fn spawn_config_doesnt_link() {
     let mut config = ProcessConfig::new().unwrap();
