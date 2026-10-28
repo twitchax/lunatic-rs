@@ -584,8 +584,11 @@ where
     }
 
     /// Kill process
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn kill(&self) {
-        unsafe { host::api::process::kill(self.process.id()) };
+        self.process.kill();
     }
 
     /// Shuts the [`AbstractProcess`] down.

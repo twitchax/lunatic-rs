@@ -393,7 +393,16 @@ impl<M, S> Process<M, S> {
     }
 
     /// Kill this process
+    ///
+    /// Panics if called on a remote process. The runtime can only kill local
+    /// processes, and a remote process ID can name a different process here.
+    #[track_caller]
     pub fn kill(&self) {
+        assert_eq!(
+            self.node_id(),
+            host::node_id(),
+            "kill() can only be used with local processes"
+        );
         unsafe { host::api::process::kill(self.id) };
     }
 

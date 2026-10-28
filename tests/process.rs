@@ -118,6 +118,15 @@ fn kill_process() {
 }
 
 #[test]
+#[should_panic(expected = "kill() can only be used with local processes")]
+fn kill_refuses_remote_process(m: Mailbox<()>) {
+    // Process IDs are per node, so this one is the caller's own ID on this node.
+    let this = m.this();
+    let remote = unsafe { Process::<()>::new(this.node_id() + 1, this.id()) };
+    remote.kill();
+}
+
+#[test]
 fn unlink_shouldnt_fail_on_dead_process() {
     let child = Process::spawn_link((), |_, _: Mailbox<()>| {});
     // Give enough time for process to finish
