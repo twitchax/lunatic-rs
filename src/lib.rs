@@ -97,6 +97,13 @@ directory for examples.
 
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
+// Lets this crate's unit tests use `lunatic::` paths (and `#[lunatic::test]`)
+// on this crate itself. Otherwise they resolve to the `lunatic` dev-dependency,
+// a second copy of the crate whose `_lunatic_spawn_by_index` export can clash
+// with this one at link time.
+#[cfg(test)]
+extern crate self as lunatic;
+
 mod config;
 mod error;
 mod macros;
