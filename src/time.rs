@@ -41,7 +41,8 @@ impl<T: AbstractProcess> WithTimeout<ProcessRef<T>> {
     /// The function will only wait for the duration of the specified timeout on
     /// the process to shut down, before returning `Err(Timeout)`.
     ///
-    /// Panics if the process doesn't exist.
+    /// Panics if the process doesn't exist, or if its node leaves the cluster
+    /// before it replies.
     #[track_caller]
     pub fn shutdown(&self) -> Result<(), Timeout>
     where
@@ -58,7 +59,8 @@ impl<T: AbstractProcess> WithTimeout<ProcessRef<T>> {
     /// The function will only wait for the duration of the specified timeout on
     /// the response, before returning `Err(Timeout)`.
     ///
-    /// Panics if the process doesn't exist.
+    /// Panics if the process doesn't exist, or if its node leaves the cluster
+    /// before it replies.
     #[track_caller]
     pub fn request<R: 'static>(&self, request: R) -> Result<T::Response, Timeout>
     where
@@ -75,7 +77,8 @@ impl<T: AbstractProcess> WithTimeout<ProcessRef<T>> {
     /// The function will only wait for the duration of the specified timeout on
     /// the response, before returning `Err(Timeout)`.
     ///
-    /// Panics if the process doesn't exist.
+    /// Panics if the process doesn't exist, or if its node leaves the cluster
+    /// before it replies.
     #[track_caller]
     pub fn deferred_request<R: 'static>(&self, request: R) -> Result<T::Response, Timeout>
     where

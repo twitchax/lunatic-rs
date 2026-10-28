@@ -1,11 +1,17 @@
 //! Checks that need a second node, run by `tests/distributed/run.sh` on one
 //! node of a two-node cluster. Prints `distributed checks ok` when they all
-//! pass, and panics otherwise.
+//! pass, and panics otherwise. The last check prints `stop node A` and waits
+//! for the script to kill the other node.
 
 use std::time::Duration;
 
-use lunatic::ap::{AbstractProcess, Config, ProcessRef, StartupError};
+use lunatic::ap::handlers::{DeferredRequest, Request};
+use lunatic::ap::{
+    AbstractProcess, Config, DeferredRequestHandler, DeferredResponse, ProcessRef, RequestHandler,
+    StartupError, State,
+};
 use lunatic::distributed::{node_id, nodes};
+use lunatic::panic::catch_panic;
 use lunatic::serializer::Bincode;
 use lunatic::{Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal, Tag};
 use serde::{Deserialize, Serialize};
@@ -16,6 +22,7 @@ const WAIT: Duration = Duration::from_secs(10);
 enum Report {
     Value(u64),
     Started(Result<ProcessRef<Named>, ProcessRef<Named>>),
+    RequestArrived,
 }
 
 type Monitoring = Mailbox<Report, Bincode, ProcessDiedSignal>;
@@ -32,6 +39,8 @@ fn main(mailbox: Mailbox<Report>) {
     monitor_fires_for_missing_process(mailbox, gone);
     stop_monitoring_stops_reports(mailbox, remote);
     start_as_registers_once(mailbox, remote);
+    requests_fail_for_missing_process(mailbox, remote);
+    node_leaving_fails_requests_and_fires_monitors(mailbox, remote);
 
     println!("distributed checks ok");
 }
@@ -108,6 +117,54 @@ fn start_as_registers_once(mailbox: Monitoring, remote: u64) {
     assert_eq!(ProcessRef::<Named>::lookup(&"distributed"), Some(winner));
 }
 
+/// The script checks the panic message.
+fn requests_fail_for_missing_process(mailbox: Monitoring, remote: u64) {
+    let server = Server::on_node(remote).start(()).unwrap();
+    assert_eq!(server.request(5), 5);
+    let process = unsafe { Process::<()>::new(server.node_id(), server.id()) };
+    mailbox.monitor(process);
+    server.shutdown();
+    assert_died(receive(mailbox), process);
+    assert!(catch_panic(|| server.request(5)).is_err());
+}
+
+/// The script kills the other node in the middle of this check, and checks the
+/// panic message of the failed request.
+fn node_leaving_fails_requests_and_fires_monitors(mailbox: Monitoring, remote: u64) {
+    let server = Server::on_node(remote).start(()).unwrap();
+    let process = unsafe { Process::<()>::new(server.node_id(), server.id()) };
+    mailbox.monitor(process);
+    let tag = Tag::new();
+    Process::spawn(
+        (mailbox.this(), tag, server),
+        |(parent, tag, server), _: Mailbox<()>| {
+            let failed = catch_panic(|| server.deferred_request(parent)).is_err();
+            parent.tag_send(tag, Report::Value(u64::from(failed)));
+        },
+    );
+    match receive(mailbox) {
+        MessageSignal::Message(Report::RequestArrived) => {}
+        other => panic!("expected the request to arrive, got {other:?}"),
+    }
+
+    println!("stop node A");
+    let (mut request_failed, mut died) = (false, false);
+    for _ in 0..2 {
+        match mailbox.receive_timeout(Duration::from_secs(30)).unwrap() {
+            MessageSignal::Message(Report::Value(failed)) => {
+                assert_eq!(failed, 1, "the request returned");
+                request_failed = true;
+            }
+            MessageSignal::Signal(ProcessDiedSignal(id)) => {
+                assert_eq!(id, server.id());
+                died = true;
+            }
+            other => panic!("expected the request to fail and the server to die, got {other:?}"),
+        }
+    }
+    assert!(request_failed && died);
+}
+
 fn receive(mailbox: Monitoring) -> MessageSignal<Report, ProcessDiedSignal> {
     mailbox.receive_timeout(WAIT).unwrap()
 }
@@ -130,5 +187,37 @@ impl AbstractProcess for Named {
 
     fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
         Ok(Self)
+    }
+}
+
+/// Answers `u64` requests. Holds on to deferred requests without answering,
+/// after telling the caller that the request arrived.
+struct Server;
+
+impl AbstractProcess for Server {
+    type State = Self;
+    type Serializer = Bincode;
+    type Arg = ();
+    type Handlers = (Request<u64>, DeferredRequest<Process<Report>>);
+    type StartupError = ();
+
+    fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+        Ok(Self)
+    }
+}
+
+impl RequestHandler<u64> for Server {
+    type Response = u64;
+
+    fn handle(_: State<Self>, request: u64) -> u64 {
+        request
+    }
+}
+
+impl DeferredRequestHandler<Process<Report>> for Server {
+    type Response = ();
+
+    fn handle(_: State<Self>, caller: Process<Report>, _: DeferredResponse<(), Self>) {
+        caller.send(Report::RequestArrived);
     }
 }

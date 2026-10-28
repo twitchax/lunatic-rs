@@ -9,7 +9,8 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 lunatic=${LUNATIC:-$root/../lunatic/target/release/lunatic}
 timeout_secs=60
-# Lines that mean a guest process failed, on any of the nodes.
+# Lines that mean a guest process failed, on any of the nodes. A panic alone
+# isn't one: the guest catches some on purpose.
 failures='failed, notifying|Error running wasm'
 
 cd "$root"
@@ -66,7 +67,23 @@ start control control
 control_url=$(wait_for control "Register URL: " | sed 's/.*Register URL: //')
 
 start node_a node --bind-socket "127.0.0.1:$port_a" "$control_url"
+node_a=${pids[-1]}
 wait_for node_a "Registration successful" >/dev/null
 
 start node_b node --bind-socket "127.0.0.1:$port_b" --wasm "$wasm" "$control_url"
+wait_for node_b "stop node A" >/dev/null
+# Crash it, so that it doesn't leave the cluster cleanly.
+kill -9 "$node_a"
+wait "$node_a" 2>/dev/null || true
 wait_for node_b "distributed checks ok"
+
+# The panics the guest caught must be the ones for these failures.
+for expected in \
+    'request\(\) failed: process [0-9]+ on node [0-9]+ does not exist' \
+    'deferred_request\(\) failed: node [0-9]+ left the cluster before process [0-9]+ replied'; do
+    if ! grep -Eq "$expected" "$logs/node_b.log"; then
+        echo "node_b didn't print a panic matching \"$expected\":" >&2
+        cat "$logs/node_b.log" >&2
+        exit 1
+    fi
+done
