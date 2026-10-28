@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use lunatic::host::api::message::receive;
 use lunatic::host::api::process::die_when_link_dies;
-use lunatic::{spawn_link, Mailbox, Process, ProcessConfig};
+use lunatic::{spawn_link, Mailbox, Process, ProcessConfig, Tag};
 use lunatic_test::test;
 
 #[test]
@@ -117,13 +117,64 @@ fn kill_process() {
     lunatic::sleep(Duration::from_millis(100));
 }
 
+/// A process on another node with the caller's own ID. Process IDs are per
+/// node, so acting on it locally would hit the caller.
+fn remote_twin<M>() -> Process<M> {
+    let this = unsafe { Process::<M>::this() };
+    unsafe { Process::new(this.node_id() + 1, this.id()) }
+}
+
 #[test]
-#[should_panic(expected = "kill() can only be used with local processes")]
-fn kill_refuses_remote_process(m: Mailbox<()>) {
-    // Process IDs are per node, so this one is the caller's own ID on this node.
-    let this = m.this();
-    let remote = unsafe { Process::<()>::new(this.node_id() + 1, this.id()) };
-    remote.kill();
+#[should_panic(expected = "kill() is not supported for remote processes")]
+fn kill_refuses_remote_process() {
+    remote_twin::<()>().kill();
+}
+
+#[test]
+#[should_panic(expected = "link() is not supported for remote processes")]
+fn link_refuses_remote_process() {
+    remote_twin::<()>().link();
+}
+
+#[test]
+#[should_panic(expected = "unlink() is not supported for remote processes")]
+fn unlink_refuses_remote_process() {
+    remote_twin::<()>().unlink();
+}
+
+#[test]
+#[should_panic(expected = "is_alive() is not supported for remote processes")]
+fn is_alive_refuses_remote_process() {
+    remote_twin::<()>().is_alive();
+}
+
+#[test]
+#[should_panic(expected = "send_after() is not supported for remote processes")]
+fn send_after_refuses_remote_process() {
+    remote_twin::<i32>().send_after(1, Duration::from_millis(10));
+}
+
+#[test]
+#[should_panic(expected = "tag_send_after() is not supported for remote processes")]
+fn tag_send_after_refuses_remote_process() {
+    remote_twin::<i32>().tag_send_after(Tag::new(), 1, Duration::from_millis(10));
+}
+
+#[test]
+fn send_after(m: Mailbox<i32>) {
+    m.this().send_after(1, Duration::from_millis(10));
+    assert_eq!(m.receive_timeout(Duration::from_secs(1)).unwrap(), 1);
+}
+
+#[test]
+fn tag_send_after(m: Mailbox<i32>) {
+    let tag = Tag::new();
+    m.this().tag_send_after(tag, 2, Duration::from_millis(10));
+    assert_eq!(
+        m.tag_receive_timeout(&[tag], Duration::from_secs(1))
+            .unwrap(),
+        2
+    );
 }
 
 #[test]

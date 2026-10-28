@@ -560,27 +560,32 @@ where
     /// Panics if called on a remote process.
     #[track_caller]
     pub fn is_alive(&self) -> bool {
-        assert_eq!(
-            self.process.node_id(),
-            host::node_id(),
-            "is_alive() can only be used with local processes"
-        );
-        unsafe { host::api::process::exists(self.process.id()) != 0 }
+        self.process.is_alive()
     }
 
     /// Link process to the one currently running.
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn link(&self) {
         self.link_with(Tag::new());
     }
 
     /// Link process to the one currently running with tag.
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn link_with(&self, tag: Tag) {
+        self.process.assert_local("link_with()");
         unsafe { host::api::process::link(tag.id(), self.process.id()) };
     }
 
     /// Unlink processes from the caller.
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn unlink(&self) {
-        unsafe { host::api::process::unlink(self.process.id()) };
+        self.process.unlink();
     }
 
     /// Kill process

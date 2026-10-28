@@ -160,13 +160,24 @@ impl<M, S> Process<M, S> {
     /// Returns `true` for processes on the local node that are running.
     ///
     /// Panics if called on a remote process.
+    #[track_caller]
     pub fn is_alive(&self) -> bool {
-        assert_eq!(
-            self.node_id(),
-            host::node_id(),
-            "is_alive() can only be used with local processes"
-        );
+        self.assert_local("is_alive()");
         unsafe { host::api::process::exists(self.id()) != 0 }
+    }
+
+    /// Panics if this process is on another node.
+    ///
+    /// Host functions that take only a process ID look it up on the local node,
+    /// where a remote process's ID can name an unrelated process. The runtime
+    /// has no distributed version of them.
+    #[track_caller]
+    pub(crate) fn assert_local(&self, operation: &str) {
+        assert_eq!(
+            self.node_id,
+            host::node_id(),
+            "{operation} is not supported for remote processes"
+        );
     }
 
     /// Spawn a process.
@@ -380,7 +391,11 @@ impl<M, S> Process<M, S> {
     }
 
     /// Link process to the one currently running.
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn link(&self) {
+        self.assert_local("link()");
         // Don't use tags because a process' [`Mailbox`] can't differentiate between
         // regular messages and signals. Both processes should almost always die
         // when a link is broken.
@@ -388,21 +403,20 @@ impl<M, S> Process<M, S> {
     }
 
     /// Unlink processes from the caller.
+    ///
+    /// Panics if called on a remote process.
+    #[track_caller]
     pub fn unlink(&self) {
+        self.assert_local("unlink()");
         unsafe { host::api::process::unlink(self.id) };
     }
 
     /// Kill this process
     ///
-    /// Panics if called on a remote process. The runtime can only kill local
-    /// processes, and a remote process ID can name a different process here.
+    /// Panics if called on a remote process.
     #[track_caller]
     pub fn kill(&self) {
-        assert_eq!(
-            self.node_id(),
-            host::node_id(),
-            "kill() can only be used with local processes"
-        );
+        self.assert_local("kill()");
         unsafe { host::api::process::kill(self.id) };
     }
 
@@ -456,8 +470,10 @@ where
     /// # Panics
     ///
     /// This function will panic if the received message can't be serialized
-    /// into `M` with serializer `S`.
+    /// into `M` with serializer `S`, or if called on a remote process.
+    #[track_caller]
     pub fn send_after(&self, message: M, duration: Duration) -> TimerRef {
+        self.assert_local("send_after()");
         // Create new message.
         unsafe { host::api::message::create_data(Tag::none().id(), 0) };
         // During serialization resources will add themselves to the message.
@@ -489,8 +505,10 @@ where
     /// # Panics
     ///
     /// This function will panic if the received message can't be serialized
-    /// into `M` with serializer `S`.
+    /// into `M` with serializer `S`, or if called on a remote process.
+    #[track_caller]
     pub fn tag_send_after(&self, tag: Tag, message: M, duration: Duration) -> TimerRef {
+        self.assert_local("tag_send_after()");
         // Create new message.
         unsafe { host::api::message::create_data(tag.id(), 0) };
         // During serialization resources will add themselves to the message.

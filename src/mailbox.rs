@@ -232,13 +232,21 @@ where
         }
     }
 
-    /// Starts monitoring a process, .
+    /// Starts monitoring a process.
+    ///
+    /// Panics if called with a remote process.
+    #[track_caller]
     pub fn monitor<T, U>(&self, process: Process<T, U>) {
+        process.assert_local("monitor()");
         unsafe { host::api::process::monitor(process.id()) };
     }
 
     /// Stop monitoring a process.
+    ///
+    /// Panics if called with a remote process.
+    #[track_caller]
     pub fn stop_monitoring<T, U>(&self, process: Process<T, U>) {
+        process.assert_local("stop_monitoring()");
         unsafe { host::api::process::stop_monitoring(process.id()) };
     }
 }

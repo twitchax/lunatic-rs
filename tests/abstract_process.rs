@@ -561,3 +561,47 @@ fn start_timeout_leaves_no_init_result_behind(mailbox: Mailbox<ProcessRef<SlowIn
     }
     assert_mailbox_stays_empty(mailbox, Duration::from_millis(100));
 }
+
+/// A reference to a process on another node with the caller's own ID.
+fn remote_twin() -> ProcessRef<InitOkAP> {
+    let this = unsafe { Process::<()>::this() };
+    unsafe { ProcessRef::new(this.node_id() + 1, this.id()) }
+}
+
+#[test]
+#[should_panic(expected = "kill() is not supported for remote processes")]
+fn kill_refuses_remote_process() {
+    remote_twin().kill();
+}
+
+#[test]
+#[should_panic(expected = "link_with() is not supported for remote processes")]
+fn link_refuses_remote_process() {
+    remote_twin().link();
+}
+
+#[test]
+#[should_panic(expected = "unlink() is not supported for remote processes")]
+fn unlink_refuses_remote_process() {
+    remote_twin().unlink();
+}
+
+#[test]
+#[should_panic(expected = "is_alive() is not supported for remote processes")]
+fn is_alive_refuses_remote_process() {
+    remote_twin().is_alive();
+}
+
+#[test]
+fn kill() {
+    let ap = InitOkAP::start(()).unwrap();
+    ap.kill();
+    // The kill is delivered asynchronously.
+    for _ in 0..1_000 {
+        if !ap.is_alive() {
+            break;
+        }
+        sleep(Duration::from_millis(1));
+    }
+    assert!(!ap.is_alive());
+}

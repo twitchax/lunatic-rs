@@ -51,3 +51,11 @@ fn cancel_send_after() {
     // give enough time for the message to be sent if it wasn't canceled
     lunatic::sleep(Duration::from_millis(25));
 }
+
+#[test]
+#[should_panic(expected = "tag_send_after() is not supported for remote processes")]
+fn send_after_refuses_remote_process() {
+    let remote =
+        unsafe { ProcessRef::<P>::new(lunatic::host::node_id() + 1, lunatic::host::process_id()) };
+    remote.with_delay(Duration::from_millis(10)).send(());
+}
