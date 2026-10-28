@@ -245,6 +245,16 @@ fn start_as_on_this_node_registers_the_name() {
     assert_eq!(exists, Err(StartupError::NameAlreadyRegistered(ap)));
 }
 
+// Without a control node a remote spawn traps, so this also shows the name is
+// checked before anything is spawned.
+#[test]
+fn start_as_on_remote_node_checks_the_name_first() {
+    let ap = RegisteredAP::start_as(&"AP", ()).unwrap();
+    let remote = lunatic::host::node_id() + 1;
+    let exists = RegisteredAP::on_node(remote).start_as(&"AP", ());
+    assert_eq!(exists, Err(StartupError::NameAlreadyRegistered(ap)));
+}
+
 /// `AbstractProcess` that can panic on message.
 struct PanicOnMessageAP;
 
