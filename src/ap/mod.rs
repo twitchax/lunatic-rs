@@ -600,6 +600,8 @@ where
     }
 
     /// Shuts the [`AbstractProcess`] down.
+    ///
+    /// Panics if the process doesn't exist.
     #[track_caller]
     pub fn shutdown(&self)
     where
@@ -615,6 +617,8 @@ where
     ///
     /// If a timeout is specified the function will only block for the timeout
     /// period before returning `Err(Timeout)`.
+    ///
+    /// Panics if the process doesn't exist.
     #[track_caller]
     pub fn shutdown_timeout(&self, timeout: Option<Duration>) -> Result<(), Timeout>
     where
@@ -631,7 +635,7 @@ where
             // Cast into the right type for sending.
             let process: Process<ShutdownMessage<T::Serializer>, T::Serializer> =
                 mem::transmute(self.process);
-            match process.tag_send_receive(send_tag, receive_tag, message, timeout) {
+            match process.tag_send_receive("shutdown", send_tag, receive_tag, message, timeout) {
                 MailboxResult::Ok(MessageSignal::Message(())) => Ok(()),
                 MailboxResult::Err(MailboxError::TimedOut) => Err(Timeout),
                 _ => unreachable!("send_receive should panic in case of other errors"),
@@ -666,6 +670,8 @@ where
     }
 
     /// Make a request to the process.
+    ///
+    /// Panics if the process doesn't exist.
     #[track_caller]
     pub fn request<R: 'static>(&self, request: R) -> T::Response
     where
@@ -702,7 +708,7 @@ where
             // Cast into the right type for sending.
             let process: Process<RequestMessage<R, T::Response, T::Serializer>, T::Serializer> =
                 mem::transmute(self.process);
-            match process.tag_send_receive(send_tag, receive_tag, message, timeout) {
+            match process.tag_send_receive("request", send_tag, receive_tag, message, timeout) {
                 MailboxResult::Ok(MessageSignal::Message(message)) => Ok(message),
                 MailboxResult::Err(MailboxError::TimedOut) => Err(Timeout),
                 _ => unreachable!("send_receive should panic in case of other errors"),
@@ -711,6 +717,8 @@ where
     }
 
     /// Make a deferred request to the process.
+    ///
+    /// Panics if the process doesn't exist.
     #[track_caller]
     pub fn deferred_request<R: 'static>(&self, request: R) -> T::Response
     where
@@ -747,7 +755,13 @@ where
             // Cast into the right type for sending.
             let process: Process<RequestMessage<R, T::Response, T::Serializer>, T::Serializer> =
                 mem::transmute(self.process);
-            match process.tag_send_receive(send_tag, receive_tag, message, timeout) {
+            match process.tag_send_receive(
+                "deferred_request",
+                send_tag,
+                receive_tag,
+                message,
+                timeout,
+            ) {
                 MailboxResult::Ok(MessageSignal::Message(message)) => Ok(message),
                 MailboxResult::Err(MailboxError::TimedOut) => Err(Timeout),
                 _ => unreachable!("send_receive should panic in case of other errors"),

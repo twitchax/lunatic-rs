@@ -637,9 +637,8 @@ fn is_alive_refuses_remote_process() {
     remote_twin().is_alive();
 }
 
-#[test]
-fn kill() {
-    let ap = InitOkAP::start(()).unwrap();
+/// Kills `ap` and waits until the runtime has removed it.
+fn killed<T: AbstractProcess>(ap: ProcessRef<T>) -> ProcessRef<T> {
     ap.kill();
     // The kill is delivered asynchronously.
     for _ in 0..1_000 {
@@ -649,4 +648,52 @@ fn kill() {
         sleep(Duration::from_millis(1));
     }
     assert!(!ap.is_alive());
+    ap
+}
+
+#[test]
+fn kill() {
+    killed(InitOkAP::start(()).unwrap());
+}
+
+#[test]
+#[should_panic(expected = "request() failed: process")]
+fn request_to_dead_process() {
+    killed(FloatsServerAP::start(vec![]).unwrap()).request(Sum);
+}
+
+#[test]
+#[should_panic(expected = "request() failed: process")]
+fn timed_request_to_dead_process() {
+    let _ = killed(FloatsServerAP::start(vec![]).unwrap())
+        .with_timeout(Duration::from_secs(1))
+        .request(Sum);
+}
+
+#[test]
+#[should_panic(expected = "deferred_request() failed: process")]
+fn deferred_request_to_dead_process() {
+    killed(DeferredStringRequestHandlerAP::start(()).unwrap()).deferred_request("Hello".to_owned());
+}
+
+#[test]
+#[should_panic(expected = "deferred_request() failed: process")]
+fn timed_deferred_request_to_dead_process() {
+    let _ = killed(DeferredStringRequestHandlerAP::start(()).unwrap())
+        .with_timeout(Duration::from_secs(1))
+        .deferred_request("Hello".to_owned());
+}
+
+#[test]
+#[should_panic(expected = "shutdown() failed: process")]
+fn shutdown_dead_process() {
+    killed(InitOkAP::start(()).unwrap()).shutdown();
+}
+
+#[test]
+#[should_panic(expected = "shutdown() failed: process")]
+fn timed_shutdown_dead_process() {
+    let _ = killed(InitOkAP::start(()).unwrap())
+        .with_timeout(Duration::from_secs(1))
+        .shutdown();
 }

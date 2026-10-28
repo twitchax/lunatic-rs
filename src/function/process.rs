@@ -14,6 +14,10 @@ use crate::serializer::{Bincode, CanSerialize};
 use crate::time::TimerRef;
 use crate::{LunaticError, MailboxResult, ProcessConfig, ProcessName, Tag};
 
+/// Returned by `send_receive_skip_search` when the receiving process doesn't
+/// exist.
+const PROCESS_NOT_FOUND: u32 = 1;
+
 /// Decides what can be turned into a process.
 ///
 /// It's only implemented for two types: Mailbox & Protocol.
@@ -536,10 +540,13 @@ where
     /// # Panics
     ///
     /// This function will panic if the received message can't be serialized
-    /// into `M` with serializer `S` or the `Response` can't be deserialized.
+    /// into `M` with serializer `S` or the `Response` can't be deserialized,
+    /// or if the process doesn't exist. `operation` names the caller's
+    /// operation in that message.
     #[track_caller]
     pub(crate) unsafe fn tag_send_receive<Response>(
         &self,
+        operation: &str,
         send_tag: Tag,
         receive_tag: Tag,
         message: M,
@@ -549,6 +556,11 @@ where
         S: CanSerialize<M>,
         S: CanSerialize<Response>,
     {
+        // The runtime only reports a missing process on other nodes. A local
+        // one drops the request, and the reply never comes.
+        if self.node_id == node_id() && unsafe { host::api::process::exists(self.id) } == 0 {
+            self.panic_not_found(operation);
+        }
         unsafe { host::api::message::create_data(send_tag.id(), 0) };
 
         S::encode(&message).unwrap();
@@ -559,14 +571,22 @@ where
 
         let result =
             host::send_receive_skip_search(self.node_id, self.id, receive_tag.id(), timeout_ms);
-        if result == TIMEOUT {
-            MailboxResult::Err(MailboxError::TimedOut)
-        } else {
-            match S::decode() {
+        match result {
+            TIMEOUT => MailboxResult::Err(MailboxError::TimedOut),
+            PROCESS_NOT_FOUND => self.panic_not_found(operation),
+            _ => match S::decode() {
                 Ok(msg) => MailboxResult::Ok(MessageSignal::Message(msg)),
                 Err(_) => panic!("Could not deserialize message: {}", type_name::<Response>()),
-            }
+            },
         }
+    }
+
+    #[track_caller]
+    fn panic_not_found(&self, operation: &str) -> ! {
+        panic!(
+            "{operation}() failed: process {} on node {} does not exist",
+            self.id, self.node_id
+        );
     }
 }
 
