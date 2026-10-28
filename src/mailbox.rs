@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::function::process::{IntoProcess, NoLink};
 use crate::host::api::message;
+use crate::host::SpawnError;
 use crate::serializer::{Bincode, CanSerialize, DecodeError};
 use crate::{host, LunaticError, Process, ProcessConfig, Tag};
 
@@ -456,6 +457,27 @@ where
     where
         S: CanSerialize<C> + CanSerialize<M>,
     {
+        Self::spawn_with_code(capture, entry, name, link, config, node)
+            .map_err(|failure| failure.error)
+    }
+}
+
+impl<M, S> Mailbox<M, S>
+where
+    S: CanSerialize<M>,
+{
+    /// [`IntoProcess::spawn`], but a failure keeps the host's result code.
+    pub(crate) fn spawn_with_code<C>(
+        capture: C,
+        entry: fn(C, Self),
+        name: Option<&str>,
+        link: Option<Tag>,
+        config: Option<&ProcessConfig>,
+        node: Option<u64>,
+    ) -> Result<Process<M, S>, SpawnError>
+    where
+        S: CanSerialize<C>,
+    {
         let entry = entry as usize as i32;
         let node_id = node.unwrap_or_else(host::node_id);
 
@@ -485,7 +507,7 @@ where
                     Ok(unsafe { std::mem::transmute::<Process<C, S>, Process<M, S>>(child) })
                 }
             }
-            Err(err) => Err(err),
+            Err(failure) => Err(failure),
         }
     }
 }

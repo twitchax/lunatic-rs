@@ -40,6 +40,7 @@ fn main(mailbox: Mailbox<Report>) {
     stop_monitoring_stops_reports(mailbox, remote);
     start_as_registers_once(mailbox, remote);
     requests_fail_for_missing_process(mailbox, remote);
+    spawns_fail_on_unknown_node();
     node_leaving_fails_requests_and_fires_monitors(mailbox, remote);
 
     println!("distributed checks ok");
@@ -126,6 +127,15 @@ fn requests_fail_for_missing_process(mailbox: Monitoring, remote: u64) {
     server.shutdown();
     assert_died(receive(mailbox), process);
     assert!(catch_panic(|| server.request(5)).is_err());
+}
+
+/// The script checks the panic messages.
+fn spawns_fail_on_unknown_node() {
+    let unknown = nodes().into_iter().max().unwrap() + 1_000;
+    assert!(catch_panic(|| Process::spawn_node(unknown, (), |_, _: Mailbox<()>| {})).is_err());
+    assert!(catch_panic(|| Named::on_node(unknown).start_as(&"unknown node", ())).is_err());
+    // A failed start leaves the name free.
+    assert_eq!(ProcessRef::<Named>::lookup(&"unknown node"), None);
 }
 
 /// The script kills the other node in the middle of this check, and checks the

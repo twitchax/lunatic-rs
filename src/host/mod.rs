@@ -29,7 +29,7 @@ pub(crate) fn spawn(
     link: Option<Tag>,
     entry: fn(i32),
     arg: i32,
-) -> Result<u64, LunaticError> {
+) -> Result<u64, SpawnError> {
     let entry = entry as usize as i32;
     let params = params_to_vec(&[Param::I32(entry), Param::I32(arg)]);
     let mut id = 0;
@@ -92,13 +92,25 @@ pub(crate) fn spawn(
         }
     };
 
-    if result == 0 {
-        Ok(id)
-    } else if result == 2 {
-        Err(LunaticError::NameAlreadyRegistered(node_id, id))
-    } else {
-        Err(LunaticError::Error(id))
-    }
+    let error = match result {
+        0 => return Ok(id),
+        2 => LunaticError::NameAlreadyRegistered(node_id, id),
+        _ => LunaticError::Error(id),
+    };
+    Err(SpawnError {
+        code: result,
+        error,
+    })
+}
+
+/// Returned by a spawn on another node when the connection to it failed, for
+/// example because it left the cluster during the spawn.
+pub(crate) const SPAWN_CONNECTION_FAILED: u32 = 9027;
+
+/// A failed [`spawn`], with the host's result code.
+pub(crate) struct SpawnError {
+    pub(crate) code: u32,
+    pub(crate) error: LunaticError,
 }
 
 /// We attach the version to the exported function to avoid duplicate exports if

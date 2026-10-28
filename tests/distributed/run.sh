@@ -80,6 +80,8 @@ wait_for node_b "distributed checks ok"
 # The panics the guest caught must be the ones for these failures.
 for expected in \
     'request\(\) failed: process [0-9]+ on node [0-9]+ does not exist' \
+    'Err` value: Node does not exist' \
+    'start_as\(\) failed on node [0-9]+: Node does not exist' \
     'deferred_request\(\) failed: node [0-9]+ left the cluster before process [0-9]+ replied'; do
     if ! grep -Eq "$expected" "$logs/node_b.log"; then
         echo "node_b didn't print a panic matching \"$expected\":" >&2

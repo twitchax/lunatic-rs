@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use super::{lifecycles, AbstractProcess, ProcessRef, StartupError};
+use crate::host::{SpawnError, SPAWN_CONNECTION_FAILED};
 use crate::{
     function::process::{process_name, ProcessType},
     host, sleep, MailboxError,
@@ -269,60 +270,36 @@ where
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
         let entry_data = (this, init_tag, arg);
-        let process = match (self.link, &self.config, self.remote_node()) {
-            (Some(_), _, Some(_node)) => {
-                panic!("a linked start is not supported for remote processes");
-            }
-            (Some(tag), Some(config), None) => {
-                Process::<(), T::Serializer>::name_spawn_link_config_tag(
-                    &name,
-                    config,
-                    entry_data,
-                    tag,
-                    lifecycles::entry::<T>,
-                )
-            }
-            (Some(tag), None, None) => Process::<(), T::Serializer>::name_spawn_link_tag(
-                &name,
-                entry_data,
-                tag,
-                lifecycles::entry::<T>,
-            ),
-            (None, Some(config), Some(node)) => {
-                Process::<(), T::Serializer>::name_spawn_node_config(
-                    &name,
-                    node,
-                    config,
-                    entry_data,
-                    lifecycles::entry::<T>,
-                )
-            }
-            (None, None, Some(node)) => Process::<(), T::Serializer>::name_spawn_node(
-                &name,
-                node,
-                entry_data,
-                lifecycles::entry::<T>,
-            ),
-            (None, Some(config), None) => Process::<(), T::Serializer>::name_spawn_config(
-                &name,
-                config,
-                entry_data,
-                lifecycles::entry::<T>,
-            ),
-            (None, None, None) => {
-                Process::<(), T::Serializer>::name_spawn(&name, entry_data, lifecycles::entry::<T>)
-            }
-        };
-
-        let process = match process {
+        if self.link.is_some() && self.remote_node().is_some() {
+            panic!("a linked start is not supported for remote processes");
+        }
+        let process = match Mailbox::<(), T::Serializer>::spawn_with_code(
+            entry_data,
+            lifecycles::entry::<T>,
+            Some(&name),
+            self.link,
+            self.config,
+            self.node,
+        ) {
             Ok(process) => process,
-            Err(LunaticError::NameAlreadyRegistered(node_id, process_id)) => {
+            Err(SpawnError {
+                error: LunaticError::NameAlreadyRegistered(node_id, process_id),
+                ..
+            }) => {
                 // If a process under this name already exists, return it.
                 return Err(StartupError::NameAlreadyRegistered(ProcessRef {
                     process: unsafe { Process::new(node_id, process_id) },
                 }));
             }
-            _ => unreachable!(),
+            Err(SpawnError { code, error }) => {
+                let node = self.node.unwrap_or_else(host::node_id);
+                let outcome = if code == SPAWN_CONNECTION_FAILED {
+                    "; the process may or may not have started"
+                } else {
+                    ""
+                };
+                panic!("start_as() failed on node {node}: {error}{outcome}");
+            }
         };
 
         // Wait on `init()`
