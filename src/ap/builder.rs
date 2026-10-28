@@ -1,9 +1,10 @@
 use std::marker::PhantomData;
+use std::time::Duration;
 
 use super::{lifecycles, AbstractProcess, ProcessRef, StartupError};
 use crate::{
     function::process::{process_name, ProcessType},
-    MailboxError,
+    host, sleep, MailboxError,
 };
 use crate::{LunaticError, Mailbox, Process, ProcessConfig, ProcessName, Tag};
 
@@ -131,15 +132,25 @@ where
 
     /// Starts a new `AbstractProcess` and returns a reference to it.
     ///
-    /// This call will block until the `init` function finishes. If the `init`
-    /// function returns an error, it will be returned as
+    /// This call will block until the `init` function finishes or `timeout`
+    /// expires. If the `init` function returns an error, it will be returned as
     /// `StartupError::Custom(error)`. If the `init` function panics during
     /// execution, it will return [`StartupError::InitPanicked`].
+    ///
+    /// If `timeout` expires first, the process is killed and
+    /// [`StartupError::TimedOut`] is returned, so retrying doesn't leave
+    /// processes behind. Its `init` result never reaches the caller's mailbox,
+    /// even if `init` finished just after the timeout.
+    ///
+    /// The runtime can't kill processes on other nodes, so a process started
+    /// with [`on_node`](Self::on_node) on a remote node keeps running after a
+    /// timeout, and its `init` result still arrives in the caller's mailbox
+    /// once `init` finishes.
     #[track_caller]
     pub fn start_timeout(
         &self,
         arg: T::Arg,
-        timeout: std::time::Duration,
+        timeout: Duration,
     ) -> Result<ProcessRef<T>, StartupError<T>> {
         let init_tag = Tag::new();
         let this = unsafe { Process::<Result<(), StartupError<T>>, T::Serializer>::this() };
@@ -187,10 +198,42 @@ where
                 Err(err) => Err(err),
             },
             Err(err) => match err {
-                MailboxError::TimedOut => Err(StartupError::TimedOut),
+                MailboxError::TimedOut => {
+                    self.abandon_init(process, mailbox, init_tag);
+                    Err(StartupError::TimedOut)
+                }
                 _ => unreachable!("tag_receive_timeout should panic in case of other errors"),
             },
         }
+    }
+
+    /// Kills a process whose `init` timed out and discards the `init` result it
+    /// may have sent before it died.
+    ///
+    /// Processes on other nodes are left running, see
+    /// [`start_timeout`](Self::start_timeout).
+    fn abandon_init(
+        &self,
+        process: Process<(), T::Serializer>,
+        mailbox: Mailbox<Result<(), StartupError<T>>, T::Serializer>,
+        init_tag: Tag,
+    ) {
+        if process.node_id() != host::node_id() {
+            return;
+        }
+        // Killing a linked process would take the caller down with it.
+        if self.link.is_some() {
+            process.unlink();
+        }
+        process.kill();
+        // A process sends its messages before the runtime removes it, so once
+        // it's gone a late `init` result is already queued for this process.
+        while process.is_alive() {
+            sleep(Duration::from_millis(1));
+        }
+        // With a non-zero timeout the receive yields if the result isn't in the
+        // mailbox yet, which lets the runtime move queued messages into it.
+        let _ = mailbox.tag_receive_timeout(&[init_tag], Duration::from_millis(1));
     }
 
     /// Starts the process and registers it under `name`. If another process is

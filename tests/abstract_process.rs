@@ -7,7 +7,7 @@ use lunatic::ap::{
 };
 use lunatic::serializer::Bincode;
 use lunatic::time::Timeout;
-use lunatic::{sleep, spawn_link, test};
+use lunatic::{sleep, spawn_link, test, Mailbox, MailboxError, Process, ProcessConfig, Tag};
 
 /// This `AbstractProcess` always panics on `init`.
 struct InitPanicksAP;
@@ -476,4 +476,88 @@ fn deferred_request_timeout() {
         .with_timeout(Duration::from_millis(10))
         .deferred_request("Hello".to_owned());
     assert_eq!(response, Err(Timeout));
+}
+
+/// `AbstractProcess` that sends a reference to itself to `parent`, then takes
+/// `init_ms` to finish `init`.
+struct SlowInitAP;
+
+impl AbstractProcess for SlowInitAP {
+    type State = Self;
+    type Serializer = Bincode;
+    type Arg = (Process<ProcessRef<SlowInitAP>>, Tag, u64);
+    type Handlers = ();
+    type StartupError = ();
+
+    fn init(config: Config<Self>, (parent, tag, init_ms): Self::Arg) -> Result<Self, ()> {
+        parent.tag_send(tag, config.self_ref());
+        sleep(Duration::from_millis(init_ms));
+        Ok(Self)
+    }
+}
+
+/// Asserts that nothing else arrives, such as a late `init` result.
+fn assert_mailbox_stays_empty<M>(mailbox: Mailbox<M>, wait: Duration)
+where
+    Bincode: lunatic::serializer::CanSerialize<M>,
+{
+    assert!(matches!(
+        mailbox.receive_timeout(wait),
+        Err(MailboxError::TimedOut)
+    ));
+}
+
+#[test]
+fn start_timeout_kills_slow_init(mailbox: Mailbox<ProcessRef<SlowInitAP>>) {
+    let tag = Tag::new();
+    let config = ProcessConfig::new().unwrap();
+    let result = SlowInitAP::configure(&config)
+        .start_timeout((mailbox.this(), tag, 500), Duration::from_millis(100));
+    assert_eq!(result, Err(StartupError::TimedOut));
+
+    let child = mailbox
+        .tag_receive_timeout(&[tag], Duration::from_secs(1))
+        .unwrap();
+    assert!(!child.is_alive());
+    assert_mailbox_stays_empty(mailbox, Duration::from_millis(600));
+}
+
+#[test]
+fn linked_start_timeout_kills_slow_init(mailbox: Mailbox<ProcessRef<SlowInitAP>>) {
+    let tag = Tag::new();
+    let result =
+        SlowInitAP::link().start_timeout((mailbox.this(), tag, 500), Duration::from_millis(100));
+    assert_eq!(result, Err(StartupError::TimedOut));
+
+    // Killing the child must not take this process down through the link.
+    let child = mailbox
+        .tag_receive_timeout(&[tag], Duration::from_secs(1))
+        .unwrap();
+    assert!(!child.is_alive());
+    assert_mailbox_stays_empty(mailbox, Duration::from_millis(600));
+}
+
+#[test]
+fn start_timeout_leaves_no_init_result_behind(mailbox: Mailbox<ProcessRef<SlowInitAP>>) {
+    let config = ProcessConfig::new().unwrap();
+    // `init` takes about as long as the timeout, so it often finishes right
+    // after the timeout fired but before the kill landed.
+    for attempt in 0..60 {
+        let init_ms = 9 + attempt % 3;
+        let tag = Tag::new();
+        let result = SlowInitAP::configure(&config)
+            .start_timeout((mailbox.this(), tag, init_ms), Duration::from_millis(10));
+        // A process killed before it ran `init` never reports itself.
+        let child = mailbox.tag_receive_timeout(&[tag], Duration::from_millis(100));
+        match result {
+            Ok(ap) => ap.shutdown(),
+            Err(StartupError::TimedOut) => {
+                if let Ok(child) = child {
+                    assert!(!child.is_alive());
+                }
+            }
+            Err(err) => panic!("unexpected startup error: {err:?}"),
+        }
+    }
+    assert_mailbox_stays_empty(mailbox, Duration::from_millis(100));
 }
