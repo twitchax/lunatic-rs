@@ -82,7 +82,8 @@ for expected in \
     'request\(\) failed: process [0-9]+ on node [0-9]+ does not exist' \
     'Err` value: Node does not exist' \
     'start_as\(\) failed on node [0-9]+: Node does not exist' \
-    'deferred_request\(\) failed: node [0-9]+ left the cluster before process [0-9]+ replied'; do
+    "request\\(\\) failed: node [0-9]+ isn't in the cluster, or left it before process 1 replied" \
+    "deferred_request\\(\\) failed: node [0-9]+ isn't in the cluster, or left it before process [0-9]+ replied"; do
     if ! grep -Eq "$expected" "$logs/node_b.log"; then
         echo "node_b didn't print a panic matching \"$expected\":" >&2
         cat "$logs/node_b.log" >&2

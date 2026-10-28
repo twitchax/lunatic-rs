@@ -41,6 +41,7 @@ fn main(mailbox: Mailbox<Report>) {
     start_as_registers_once(mailbox, remote);
     requests_fail_for_missing_process(mailbox, remote);
     spawns_fail_on_unknown_node();
+    messages_to_unknown_node();
     node_leaving_fails_requests_and_fires_monitors(mailbox, remote);
 
     println!("distributed checks ok");
@@ -131,11 +132,26 @@ fn requests_fail_for_missing_process(mailbox: Monitoring, remote: u64) {
 
 /// The script checks the panic messages.
 fn spawns_fail_on_unknown_node() {
-    let unknown = nodes().into_iter().max().unwrap() + 1_000;
+    let unknown = unknown_node();
     assert!(catch_panic(|| Process::spawn_node(unknown, (), |_, _: Mailbox<()>| {})).is_err());
     assert!(catch_panic(|| Named::on_node(unknown).start_as(&"unknown node", ())).is_err());
     // A failed start leaves the name free.
     assert_eq!(ProcessRef::<Named>::lookup(&"unknown node"), None);
+}
+
+/// Sends to a node that isn't in the cluster are dropped, but requests fail.
+/// The script checks the panic message.
+fn messages_to_unknown_node() {
+    let unknown = unknown_node();
+    let process = unsafe { Process::<u64>::new(unknown, 1) };
+    process.send(1);
+    process.tag_send(Tag::new(), 2);
+    let server = unsafe { ProcessRef::<Server>::new(unknown, 1) };
+    assert!(catch_panic(|| server.request(5)).is_err());
+}
+
+fn unknown_node() -> u64 {
+    nodes().into_iter().max().unwrap() + 1_000
 }
 
 /// The script kills the other node in the middle of this check, and checks the
@@ -173,6 +189,8 @@ fn node_leaving_fails_requests_and_fires_monitors(mailbox: Monitoring, remote: u
         }
     }
     assert!(request_failed && died);
+    // Sends to the node that left are dropped.
+    unsafe { Process::<u64>::new(remote, server.id()) }.send(1);
 }
 
 fn receive(mailbox: Monitoring) -> MessageSignal<Report, ProcessDiedSignal> {

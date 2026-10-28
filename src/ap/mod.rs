@@ -601,8 +601,8 @@ where
 
     /// Shuts the [`AbstractProcess`] down.
     ///
-    /// Panics if the process doesn't exist, or if its node leaves the cluster
-    /// before it replies.
+    /// Panics if the process doesn't exist, or if its node isn't in the cluster
+    /// or leaves it before the process replies.
     #[track_caller]
     pub fn shutdown(&self)
     where
@@ -619,8 +619,8 @@ where
     /// If a timeout is specified the function will only block for the timeout
     /// period before returning `Err(Timeout)`.
     ///
-    /// Panics if the process doesn't exist, or if its node leaves the cluster
-    /// before it replies.
+    /// Panics if the process doesn't exist, or if its node isn't in the cluster
+    /// or leaves it before the process replies.
     #[track_caller]
     pub fn shutdown_timeout(&self, timeout: Option<Duration>) -> Result<(), Timeout>
     where
@@ -673,8 +673,8 @@ where
 
     /// Make a request to the process.
     ///
-    /// Panics if the process doesn't exist, or if its node leaves the cluster
-    /// before it replies.
+    /// Panics if the process doesn't exist, or if its node isn't in the cluster
+    /// or leaves it before the process replies.
     #[track_caller]
     pub fn request<R: 'static>(&self, request: R) -> T::Response
     where
@@ -721,8 +721,8 @@ where
 
     /// Make a deferred request to the process.
     ///
-    /// Panics if the process doesn't exist, or if its node leaves the cluster
-    /// before it replies.
+    /// Panics if the process doesn't exist, or if its node isn't in the cluster
+    /// or leaves it before the process replies.
     #[track_caller]
     pub fn deferred_request<R: 'static>(&self, request: R) -> T::Response
     where

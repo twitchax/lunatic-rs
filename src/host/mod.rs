@@ -130,6 +130,8 @@ pub fn node_id() -> u64 {
     unsafe { api::distributed::node_id() }
 }
 
+/// Sends the message in the scratch area. A message to a process that doesn't
+/// exist, or whose node isn't in the cluster, is dropped.
 pub fn send(node: u64, process_id: u64) {
     if node_id() == node {
         unsafe { api::message::send(process_id) }

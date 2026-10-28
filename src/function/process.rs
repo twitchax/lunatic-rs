@@ -18,8 +18,8 @@ use crate::{LunaticError, MailboxResult, ProcessConfig, ProcessName, Tag};
 /// exist.
 const PROCESS_NOT_FOUND: u32 = 1;
 /// Returned by `send_receive_skip_search` when the receiving process' node
-/// leaves the cluster before the process replies.
-const NODE_LEFT: u32 = 2;
+/// isn't in the cluster, or leaves it before the process replies.
+const NODE_NOT_IN_CLUSTER: u32 = 2;
 
 /// Decides what can be turned into a process.
 ///
@@ -366,6 +366,9 @@ where
 {
     /// Send a message to the process.
     ///
+    /// A message to a process that doesn't exist, or whose node isn't in the
+    /// cluster, is dropped.
+    ///
     /// # Panics
     ///
     /// This function will panic if the received message can't be serialized
@@ -399,6 +402,9 @@ where
     }
 
     /// Send message to process with a specific tag.
+    ///
+    /// A message to a process that doesn't exist, or whose node isn't in the
+    /// cluster, is dropped.
     ///
     /// # Panics
     ///
@@ -445,8 +451,8 @@ where
     ///
     /// This function will panic if the received message can't be serialized
     /// into `M` with serializer `S` or the `Response` can't be deserialized,
-    /// if the process doesn't exist, or if its node leaves the cluster before
-    /// it replies. `operation` names the caller's operation in those messages.
+    /// if the process doesn't exist, or if its node isn't in the cluster or
+    /// leaves it before the process replies. `operation` names the caller's operation in those messages.
     #[track_caller]
     pub(crate) unsafe fn tag_send_receive<Response>(
         &self,
@@ -478,8 +484,9 @@ where
         match result {
             TIMEOUT => MailboxResult::Err(MailboxError::TimedOut),
             PROCESS_NOT_FOUND => self.panic_not_found(operation),
-            NODE_LEFT => panic!(
-                "{operation}() failed: node {} left the cluster before process {} replied",
+            NODE_NOT_IN_CLUSTER => panic!(
+                "{operation}() failed: node {} isn't in the cluster, or left it before process {} \
+                 replied",
                 self.node_id, self.id
             ),
             _ => match S::decode() {
