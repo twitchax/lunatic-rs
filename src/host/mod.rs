@@ -42,16 +42,21 @@ pub(crate) fn spawn(
     let config_id = config.map_or_else(|| ProcessConfig::inherit().id(), |config| config.id());
     let remote_node = node.filter(|&node| node != self::node_id());
     let result = unsafe {
-        if let Some(node) = remote_node {
-            // A remote process is named in this node's registry. The registry
-            // can't stay locked across the remote spawn, so the name is checked
-            // before spawning and registered after.
-            if let Some(name) = name {
-                if api::registry::get(name.as_ptr(), name.len(), &mut node_id, &mut id) == 0 {
-                    return Err(LunaticError::NameAlreadyRegistered(node_id, id));
-                }
-            }
-            let result = api::distributed::spawn(
+        match (remote_node, name) {
+            (Some(node), Some(name)) => api::distributed::get_or_spawn(
+                name.as_ptr(),
+                name.len(),
+                node,
+                config_id,
+                api::distributed::module_id(),
+                func.as_ptr(),
+                func.len(),
+                params.as_ptr(),
+                params.len(),
+                &mut node_id,
+                &mut id,
+            ),
+            (Some(node), None) => api::distributed::spawn(
                 node,
                 config_id,
                 api::distributed::module_id(),
@@ -60,13 +65,8 @@ pub(crate) fn spawn(
                 params.as_ptr(),
                 params.len(),
                 &mut id,
-            );
-            if let (0, Some(name)) = (result, name) {
-                api::registry::put(name.as_ptr(), name.len(), node, id);
-            }
-            result
-        } else if let Some(name) = name {
-            api::process::get_or_spawn(
+            ),
+            (None, Some(name)) => api::process::get_or_spawn(
                 name.as_ptr(),
                 name.len(),
                 link,
@@ -78,9 +78,8 @@ pub(crate) fn spawn(
                 params.len(),
                 &mut node_id,
                 &mut id,
-            )
-        } else {
-            api::process::spawn(
+            ),
+            (None, None) => api::process::spawn(
                 link,
                 config_id,
                 WasmModule::inherit().id(),
@@ -89,7 +88,7 @@ pub(crate) fn spawn(
                 params.as_ptr(),
                 params.len(),
                 &mut id,
-            )
+            ),
         }
     };
 

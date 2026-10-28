@@ -4,9 +4,10 @@
 
 use std::time::Duration;
 
+use lunatic::ap::{AbstractProcess, Config, ProcessRef, StartupError};
 use lunatic::distributed::{node_id, nodes};
 use lunatic::serializer::Bincode;
-use lunatic::{Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal};
+use lunatic::{Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal, Tag};
 use serde::{Deserialize, Serialize};
 
 const WAIT: Duration = Duration::from_secs(10);
@@ -14,6 +15,7 @@ const WAIT: Duration = Duration::from_secs(10);
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 enum Report {
     Value(u64),
+    Started(Result<ProcessRef<Named>, ProcessRef<Named>>),
 }
 
 type Monitoring = Mailbox<Report, Bincode, ProcessDiedSignal>;
@@ -29,6 +31,7 @@ fn main(mailbox: Mailbox<Report>) {
     let gone = monitor_fires_after_normal_exit(mailbox, remote);
     monitor_fires_for_missing_process(mailbox, gone);
     stop_monitoring_stops_reports(mailbox, remote);
+    start_as_registers_once(mailbox, remote);
 
     println!("distributed checks ok");
 }
@@ -66,6 +69,45 @@ fn stop_monitoring_stops_reports(mailbox: Monitoring, remote: u64) {
     ));
 }
 
+/// Several processes race to start the same name on the other node: exactly
+/// one starts it, and the others get that process back.
+fn start_as_registers_once(mailbox: Monitoring, remote: u64) {
+    const RACERS: usize = 8;
+    let tag = Tag::new();
+    for _ in 0..RACERS {
+        Process::spawn(
+            (mailbox.this(), tag, remote),
+            |(parent, tag, remote), _: Mailbox<()>| {
+                let started = match Named::on_node(remote).start_as(&"distributed", ()) {
+                    Ok(named) => Ok(named),
+                    Err(StartupError::NameAlreadyRegistered(named)) => Err(named),
+                    Err(err) => panic!("start_as failed: {err:?}"),
+                };
+                parent.tag_send(tag, Report::Started(started));
+            },
+        );
+    }
+
+    let mut winner = None;
+    let mut others = Vec::new();
+    for _ in 0..RACERS {
+        match mailbox.tag_receive_timeout(&[tag], WAIT) {
+            Ok(MessageSignal::Message(Report::Started(Ok(named)))) => {
+                assert!(
+                    winner.replace(named).is_none(),
+                    "two processes got the name"
+                );
+            }
+            Ok(MessageSignal::Message(Report::Started(Err(named)))) => others.push(named),
+            other => panic!("expected a start_as result, got {other:?}"),
+        }
+    }
+    let winner = winner.expect("nobody got the name");
+    assert_eq!(winner.node_id(), remote);
+    assert!(others.iter().all(|named| *named == winner));
+    assert_eq!(ProcessRef::<Named>::lookup(&"distributed"), Some(winner));
+}
+
 fn receive(mailbox: Monitoring) -> MessageSignal<Report, ProcessDiedSignal> {
     mailbox.receive_timeout(WAIT).unwrap()
 }
@@ -74,5 +116,19 @@ fn assert_died(received: MessageSignal<Report, ProcessDiedSignal>, process: Proc
     match received {
         MessageSignal::Signal(ProcessDiedSignal(id)) => assert_eq!(id, process.id()),
         other => panic!("expected process {} to die, got {other:?}", process.id()),
+    }
+}
+
+struct Named;
+
+impl AbstractProcess for Named {
+    type State = Self;
+    type Serializer = Bincode;
+    type Arg = ();
+    type Handlers = ();
+    type StartupError = ();
+
+    fn init(_: Config<Self>, _: ()) -> Result<Self, ()> {
+        Ok(Self)
     }
 }

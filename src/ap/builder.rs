@@ -257,10 +257,7 @@ where
     ///
     /// If used in combination with the [`on_node`](Self::on_node) option, the
     /// name registration will be performed on the local node and not the remote
-    /// one. For a remote node the name is checked before the spawn and
-    /// registered after it, which isn't atomic: if two callers race for the
-    /// same free name, both processes start and the later one ends up under the
-    /// name.
+    /// one.
     #[track_caller]
     pub fn start_as<N: ProcessName>(
         &self,

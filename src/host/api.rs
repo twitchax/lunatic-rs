@@ -336,6 +336,19 @@ pub mod distributed {
             params_len: usize,
             id: *mut u64,
         ) -> u32;
+        pub fn get_or_spawn(
+            name: *const u8,
+            name_len: usize,
+            node_id: u64,
+            config_id: i64,
+            module_id: u64,
+            function: *const u8,
+            function_len: usize,
+            params: *const u8,
+            params_len: usize,
+            node_id_ptr: *mut u64,
+            id: *mut u64,
+        ) -> u32;
         pub fn monitor(node_id: u64, process_id: u64);
         pub fn stop_monitoring(node_id: u64, process_id: u64);
     }
