@@ -756,6 +756,9 @@ where
     ///
     /// Timeouts affect [`ProcessRef::shutdown`], [`ProcessRef::request`] and
     /// [`ProcessRef::deferred_request`] functions.
+    ///
+    /// Known issue: a reply that arrives after the timeout is never received
+    /// and stays in the caller's mailbox.
     pub fn with_timeout(self, timeout: Duration) -> WithTimeout<ProcessRef<T>> {
         WithTimeout::from(timeout, self)
     }
