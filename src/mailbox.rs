@@ -234,20 +234,18 @@ where
 
     /// Starts monitoring a process.
     ///
-    /// Panics if called with a remote process.
-    #[track_caller]
+    /// A [`ProcessDiedSignal`] arrives when the process exits for any reason,
+    /// after every message it sent to this process. For a remote process it
+    /// also arrives when its node goes down, and right away if the process
+    /// doesn't exist. For a local process that already exited, nothing
+    /// arrives.
     pub fn monitor<T, U>(&self, process: Process<T, U>) {
-        process.assert_local("monitor()");
-        unsafe { host::api::process::monitor(process.id()) };
+        host::monitor(process.node_id(), process.id());
     }
 
     /// Stop monitoring a process.
-    ///
-    /// Panics if called with a remote process.
-    #[track_caller]
     pub fn stop_monitoring<T, U>(&self, process: Process<T, U>) {
-        process.assert_local("stop_monitoring()");
-        unsafe { host::api::process::stop_monitoring(process.id()) };
+        host::stop_monitoring(process.node_id(), process.id());
     }
 }
 

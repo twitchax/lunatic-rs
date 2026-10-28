@@ -336,6 +336,8 @@ pub mod distributed {
             params_len: usize,
             id: *mut u64,
         ) -> u32;
+        pub fn monitor(node_id: u64, process_id: u64);
+        pub fn stop_monitoring(node_id: u64, process_id: u64);
     }
 }
 

@@ -127,6 +127,22 @@ pub fn send(node: u64, process_id: u64) {
     };
 }
 
+pub fn monitor(node: u64, process_id: u64) {
+    if node_id() == node {
+        unsafe { api::process::monitor(process_id) }
+    } else {
+        unsafe { api::distributed::monitor(node, process_id) }
+    };
+}
+
+pub fn stop_monitoring(node: u64, process_id: u64) {
+    if node_id() == node {
+        unsafe { api::process::stop_monitoring(process_id) }
+    } else {
+        unsafe { api::distributed::stop_monitoring(node, process_id) }
+    };
+}
+
 pub fn send_receive_skip_search(node: u64, process_id: u64, wait_on_tag: i64, timeout: u64) -> u32 {
     if node_id() == node {
         unsafe { api::message::send_receive_skip_search(process_id, wait_on_tag, timeout) }

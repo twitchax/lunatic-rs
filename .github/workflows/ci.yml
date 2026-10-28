@@ -32,6 +32,9 @@ jobs:
       - name: "Run tests"
         working-directory: lunatic-rs
         run: cargo test --workspace --features json_serializer,msgpack_serializer,protobuf_serializer,sqlite
+      - name: "Run distributed tests"
+        working-directory: lunatic-rs
+        run: tests/distributed/run.sh
       - name: "Run clippy"
         working-directory: lunatic-rs
         run: cargo clippy --features json_serializer,msgpack_serializer,protobuf_serializer,sqlite -- -D warnings

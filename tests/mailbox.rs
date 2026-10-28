@@ -2,12 +2,6 @@ use std::time::Duration;
 
 use lunatic::{test, Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal};
 
-/// A process on another node with the caller's own ID.
-fn remote_twin() -> Process<()> {
-    let this = unsafe { Process::<()>::this() };
-    unsafe { Process::new(this.node_id() + 1, this.id()) }
-}
-
 #[test]
 fn monitor(mailbox: Mailbox<()>) {
     let mailbox = mailbox.monitorable();
@@ -32,18 +26,6 @@ fn stop_monitoring(mailbox: Mailbox<()>) {
         mailbox.receive_timeout(Duration::from_millis(200)),
         Err(MailboxError::TimedOut)
     ));
-}
-
-#[test]
-#[should_panic(expected = "monitor() is not supported for remote processes")]
-fn monitor_refuses_remote_process(mailbox: Mailbox<()>) {
-    mailbox.monitorable().monitor(remote_twin());
-}
-
-#[test]
-#[should_panic(expected = "stop_monitoring() is not supported for remote processes")]
-fn stop_monitoring_refuses_remote_process(mailbox: Mailbox<()>) {
-    mailbox.monitorable().stop_monitoring(remote_twin());
 }
 
 #[cfg(feature = "msgpack_serializer")]

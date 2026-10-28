@@ -49,6 +49,11 @@ name = "sqlite"
 path = "tests/sqlite.rs"
 required-features = ["sqlite"]
 
+# Needs a second node, so `tests/distributed/run.sh` runs it on a cluster.
+[[example]]
+name = "distributed_checks"
+path = "tests/distributed/guest.rs"
+
 [workspace]
 members = ["lunatic-macros", "lunatic-test", "lunatic-sys"]
 
