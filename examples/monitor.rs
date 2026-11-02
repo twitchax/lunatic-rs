@@ -14,8 +14,8 @@ fn main(mailbox: Mailbox<String>) {
             MessageSignal::Message(msg) => {
                 println!("{msg}");
             }
-            MessageSignal::Signal(ProcessDiedSignal(id)) => {
-                println!("Process {id} died");
+            MessageSignal::Signal(ProcessDiedSignal { process_id, .. }) => {
+                println!("Process {process_id} died");
                 break;
             }
         }

@@ -10,7 +10,7 @@ fn monitor(mailbox: Mailbox<()>) {
     mailbox.monitor(child);
     child.send(());
     match mailbox.receive_timeout(Duration::from_secs(1)) {
-        Ok(MessageSignal::Signal(ProcessDiedSignal(id))) => assert_eq!(id, child.id()),
+        Ok(MessageSignal::Signal(signal)) => assert_eq!(signal, died(child)),
         other => panic!("expected the child's death, got {other:?}"),
     }
 }
@@ -29,7 +29,7 @@ fn monitor_exited_process(mailbox: Mailbox<()>) {
     assert!(!child.is_alive());
     mailbox.monitor(child);
     match mailbox.receive_timeout(Duration::from_secs(1)) {
-        Ok(MessageSignal::Signal(ProcessDiedSignal(id))) => assert_eq!(id, child.id()),
+        Ok(MessageSignal::Signal(signal)) => assert_eq!(signal, died(child)),
         other => panic!("expected the exited child's death, got {other:?}"),
     }
 }
@@ -124,5 +124,13 @@ mod msgpack {
         child.tag_send(Tag::special(65).unwrap(), 2);
         child.tag_send(Tag::special(64).unwrap(), 1);
         let _ = mailbox.receive();
+    }
+}
+
+/// The signal for the death of `process`.
+fn died(process: Process<()>) -> ProcessDiedSignal {
+    ProcessDiedSignal {
+        node_id: process.node_id(),
+        process_id: process.id(),
     }
 }

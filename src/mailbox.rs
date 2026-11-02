@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::function::process::{IntoProcess, NoLink};
-use crate::host::api::message;
+use crate::host::api::{distributed, message};
 use crate::host::SpawnError;
 use crate::serializer::{Bincode, CanSerialize, DecodeError};
 use crate::{host, LunaticError, Process, ProcessConfig, Tag};
@@ -288,7 +288,10 @@ where
                 Tag::from(message::get_tag())
             }))),
             PROCESS_DIED => Ok(MessageSignal::Signal(Signal::ProcessDied(unsafe {
-                message::get_process_id()
+                ProcessDiedSignal {
+                    node_id: distributed::get_message_node_id(),
+                    process_id: message::get_process_id(),
+                }
             }))),
             TIMEOUT => Err(MailboxError::TimedOut),
             _ => panic!("unknown message type: {message_type}"),
@@ -344,7 +347,7 @@ pub enum Signal {
     /// A linked process died.
     LinkDied(Tag),
     /// A monitored process died.
-    ProcessDied(u64),
+    ProcessDied(ProcessDiedSignal),
 }
 
 /// A linked process died.
@@ -352,8 +355,16 @@ pub enum Signal {
 pub struct LinkDiedSignal(pub Tag);
 
 /// A monitored process died.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct ProcessDiedSignal(pub u64);
+///
+/// Process IDs are only unique on their node, so a process monitoring
+/// processes on several nodes tells them apart by `node_id` too.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ProcessDiedSignal {
+    /// The node the process was on.
+    pub node_id: u64,
+    /// The process' ID on its node.
+    pub process_id: u64,
+}
 
 impl<T, U> MessageSignal<T, U> {
     /// Unwraps the inner message, otherwise panics.
@@ -431,9 +442,7 @@ impl<T> TryFrom<MessageSignal<T, Signal>> for MessageSignal<T, ProcessDiedSignal
         match value {
             MessageSignal::Message(m) => Ok(MessageSignal::Message(m)),
             MessageSignal::Signal(Signal::LinkDied(_)) => Err(MessageSignalConvertError),
-            MessageSignal::Signal(Signal::ProcessDied(id)) => {
-                Ok(MessageSignal::Signal(ProcessDiedSignal(id)))
-            }
+            MessageSignal::Signal(Signal::ProcessDied(signal)) => Ok(MessageSignal::Signal(signal)),
         }
     }
 }

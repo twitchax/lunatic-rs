@@ -351,6 +351,7 @@ pub mod distributed {
         ) -> u32;
         pub fn monitor(node_id: u64, process_id: u64);
         pub fn stop_monitoring(node_id: u64, process_id: u64);
+        pub fn get_message_node_id() -> u64;
     }
 }
 

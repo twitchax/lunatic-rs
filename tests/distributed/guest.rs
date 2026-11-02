@@ -37,6 +37,7 @@ fn main(mailbox: Mailbox<Report>) {
 
     let gone = monitor_fires_after_normal_exit(mailbox, remote);
     monitor_fires_for_missing_process(mailbox, gone);
+    monitors_tell_nodes_apart(mailbox, remote);
     stop_monitoring_stops_reports(mailbox, remote);
     start_as_registers_once(mailbox, remote);
     requests_fail_for_missing_process(mailbox, remote);
@@ -67,6 +68,17 @@ fn monitor_fires_after_normal_exit(mailbox: Monitoring, remote: u64) -> Process<
 fn monitor_fires_for_missing_process(mailbox: Monitoring, gone: Process<()>) {
     mailbox.monitor(gone);
     assert_died(receive(mailbox), gone);
+}
+
+/// Process IDs repeat across nodes, so the signals name the node too.
+fn monitors_tell_nodes_apart(mailbox: Monitoring, remote: u64) {
+    let missing = 1_000_000;
+    let remote = unsafe { Process::<()>::new(remote, missing) };
+    let local = unsafe { Process::<()>::new(node_id(), missing) };
+    mailbox.monitor(remote);
+    assert_died(receive(mailbox), remote);
+    mailbox.monitor(local);
+    assert_died(receive(mailbox), local);
 }
 
 fn stop_monitoring_stops_reports(mailbox: Monitoring, remote: u64) {
@@ -181,8 +193,14 @@ fn node_leaving_fails_requests_and_fires_monitors(mailbox: Monitoring, remote: u
                 assert_eq!(failed, 1, "the request returned");
                 request_failed = true;
             }
-            MessageSignal::Signal(ProcessDiedSignal(id)) => {
-                assert_eq!(id, server.id());
+            MessageSignal::Signal(signal) => {
+                assert_eq!(
+                    signal,
+                    ProcessDiedSignal {
+                        node_id: remote,
+                        process_id: server.id(),
+                    }
+                );
                 died = true;
             }
             other => panic!("expected the request to fail and the server to die, got {other:?}"),
@@ -199,8 +217,18 @@ fn receive(mailbox: Monitoring) -> MessageSignal<Report, ProcessDiedSignal> {
 
 fn assert_died(received: MessageSignal<Report, ProcessDiedSignal>, process: Process<()>) {
     match received {
-        MessageSignal::Signal(ProcessDiedSignal(id)) => assert_eq!(id, process.id()),
-        other => panic!("expected process {} to die, got {other:?}", process.id()),
+        MessageSignal::Signal(signal) => assert_eq!(
+            signal,
+            ProcessDiedSignal {
+                node_id: process.node_id(),
+                process_id: process.id(),
+            }
+        ),
+        other => panic!(
+            "expected process {} on node {} to die, got {other:?}",
+            process.id(),
+            process.node_id()
+        ),
     }
 }
 
