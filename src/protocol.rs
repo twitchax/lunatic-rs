@@ -376,7 +376,7 @@ where
                 child.send(capture);
                 Ok(Protocol::from_process_with_tag(child, tag))
             }
-            Err(failure) => Err(failure.error),
+            Err(error) => Err(error),
         }
     }
 }

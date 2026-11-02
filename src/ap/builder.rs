@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::time::Duration;
 
 use super::{lifecycles, AbstractProcess, ProcessRef, StartupError};
-use crate::host::{SpawnError, SPAWN_CONNECTION_FAILED};
+use crate::function::process::IntoProcess;
 use crate::{
     function::process::{process_name, ProcessType},
     host, sleep, MailboxError,
@@ -273,7 +273,7 @@ where
         if self.link.is_some() && self.remote_node().is_some() {
             panic!("a linked start is not supported for remote processes");
         }
-        let process = match Mailbox::<(), T::Serializer>::spawn_with_code(
+        let process = match Mailbox::<(), T::Serializer>::spawn(
             entry_data,
             lifecycles::entry::<T>,
             Some(&name),
@@ -282,23 +282,15 @@ where
             self.node,
         ) {
             Ok(process) => process,
-            Err(SpawnError {
-                error: LunaticError::NameAlreadyRegistered(node_id, process_id),
-                ..
-            }) => {
+            Err(LunaticError::NameAlreadyRegistered(node_id, process_id)) => {
                 // If a process under this name already exists, return it.
                 return Err(StartupError::NameAlreadyRegistered(ProcessRef {
                     process: unsafe { Process::new(node_id, process_id) },
                 }));
             }
-            Err(SpawnError { code, error }) => {
+            Err(error) => {
                 let node = self.node.unwrap_or_else(host::node_id);
-                let outcome = if code == SPAWN_CONNECTION_FAILED {
-                    "; the process may or may not have started"
-                } else {
-                    ""
-                };
-                panic!("start_as() failed on node {node}: {error}{outcome}");
+                panic!("start_as() failed on node {node}: {error}");
             }
         };
 

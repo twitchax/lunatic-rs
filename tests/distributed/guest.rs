@@ -11,9 +11,12 @@ use lunatic::ap::{
     StartupError, State,
 };
 use lunatic::distributed::{node_id, nodes};
+use lunatic::function::process::IntoProcess;
 use lunatic::panic::catch_panic;
 use lunatic::serializer::Bincode;
-use lunatic::{Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal, Tag};
+use lunatic::{
+    LunaticError, Mailbox, MailboxError, MessageSignal, Process, ProcessDiedSignal, Tag,
+};
 use serde::{Deserialize, Serialize};
 
 const WAIT: Duration = Duration::from_secs(10);
@@ -145,6 +148,18 @@ fn requests_fail_for_missing_process(mailbox: Monitoring, remote: u64) {
 /// The script checks the panic messages.
 fn spawns_fail_on_unknown_node() {
     let unknown = unknown_node();
+    let spawned = <Mailbox<()> as IntoProcess<(), Bincode>>::spawn(
+        (),
+        |_, _| {},
+        None,
+        None,
+        None,
+        Some(unknown),
+    );
+    assert!(
+        matches!(spawned, Err(LunaticError::NodeNotFound(node)) if node == unknown),
+        "{spawned:?}"
+    );
     assert!(catch_panic(|| Process::spawn_node(unknown, (), |_, _: Mailbox<()>| {})).is_err());
     assert!(catch_panic(|| Named::on_node(unknown).start_as(&"unknown node", ())).is_err());
     // A failed start leaves the name free.

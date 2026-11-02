@@ -29,7 +29,7 @@ pub(crate) fn spawn(
     link: Option<Tag>,
     entry: fn(i32),
     arg: i32,
-) -> Result<u64, SpawnError> {
+) -> Result<u64, LunaticError> {
     let entry = entry as usize as i32;
     let params = params_to_vec(&[Param::I32(entry), Param::I32(arg)]);
     let mut id = 0;
@@ -92,25 +92,23 @@ pub(crate) fn spawn(
         }
     };
 
-    let error = match result {
-        0 => return Ok(id),
-        2 => LunaticError::NameAlreadyRegistered(node_id, id),
-        _ => LunaticError::Error(id),
-    };
-    Err(SpawnError {
-        code: result,
-        error,
-    })
+    // What a result code means depends on the kind of spawn.
+    match (result, remote_node, name) {
+        (0, _, _) => Ok(id),
+        (2, _, Some(_)) => Err(LunaticError::NameAlreadyRegistered(node_id, id)),
+        (SPAWN_NODE_NOT_FOUND, Some(node), _) => Err(node_not_found(node, id)),
+        _ => Err(LunaticError::Error(id)),
+    }
 }
 
-/// Returned by a spawn on another node when the connection to it failed, for
-/// example because it left the cluster during the spawn.
-pub(crate) const SPAWN_CONNECTION_FAILED: u32 = 9027;
+/// Returned by a spawn on another node that isn't in the cluster.
+pub(crate) const SPAWN_NODE_NOT_FOUND: u32 = 1;
 
-/// A failed [`spawn`], with the host's result code.
-pub(crate) struct SpawnError {
-    pub(crate) code: u32,
-    pub(crate) error: LunaticError,
+/// The error of a spawn on `node`, which isn't in the cluster. The host's error
+/// `error_id` says no more than that, so it's dropped.
+pub(crate) fn node_not_found(node: u64, error_id: u64) -> LunaticError {
+    unsafe { api::error::drop(error_id) };
+    LunaticError::NodeNotFound(node)
 }
 
 /// We attach the version to the exported function to avoid duplicate exports if

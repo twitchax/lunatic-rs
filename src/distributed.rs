@@ -1,3 +1,4 @@
+use crate::host;
 use crate::host::api::distributed::{
     copy_lookup_nodes_results, exec_lookup_nodes, get_nodes, module_id, nodes_count,
 };
@@ -65,9 +66,9 @@ pub fn spawn(node_id: u64, config_id: i64, entry: fn(i32), arg: i32) -> Result<u
             &mut id,
         )
     };
-    if result == 0 {
-        Ok(id)
-    } else {
-        Err(LunaticError::Error(id))
+    match result {
+        0 => Ok(id),
+        host::SPAWN_NODE_NOT_FOUND => Err(host::node_not_found(node_id, id)),
+        _ => Err(LunaticError::Error(id)),
     }
 }

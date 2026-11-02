@@ -16,6 +16,8 @@ pub enum LunaticError {
     PermissionDenied,
     /// A process under this name already exists (node_id, process_id)
     NameAlreadyRegistered(u64, u64),
+    /// The node isn't in the cluster, or left it (node_id)
+    NodeNotFound(u64),
 }
 
 impl Drop for LunaticError {
@@ -26,6 +28,7 @@ impl Drop for LunaticError {
             }
             Self::PermissionDenied => (),
             Self::NameAlreadyRegistered(_, _) => (),
+            Self::NodeNotFound(_) => (),
         }
     }
 }
@@ -42,6 +45,7 @@ impl Debug for LunaticError {
             }
             Self::PermissionDenied => write!(f, "Permission denied"),
             Self::NameAlreadyRegistered(_, _) => write!(f, "Name is already registered"),
+            Self::NodeNotFound(node_id) => write!(f, "Node {node_id} isn't in the cluster"),
         }
     }
 }
@@ -58,6 +62,7 @@ impl Display for LunaticError {
             }
             Self::PermissionDenied => write!(f, "Permission denied"),
             Self::NameAlreadyRegistered(_, _) => write!(f, "Name is already registered"),
+            Self::NodeNotFound(node_id) => write!(f, "Node {node_id} isn't in the cluster"),
         }
     }
 }
