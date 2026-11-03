@@ -1,6 +1,16 @@
 This library allows you to build Rust applications that run on top of [Lunatic][1].
 
-[**DOCS**](https://docs.rs/lunatic/latest/lunatic/) |
+This is a fork, published as `lunatic-twitchax-patch` and still imported as `lunatic`:
+
+```toml
+[dependencies]
+lunatic-twitchax-patch = "0.15"
+```
+
+It needs the matching runtime from [twitchax/lunatic][7], 0.15 or later, since it calls host functions older
+runtimes don't have.
+
+[**DOCS**](https://docs.rs/lunatic-twitchax-patch/latest/lunatic/) |
 [**Join our community on Discord!**](https://discord.gg/b7zDqpXpB4)
 
 ### Why run on Lunatic?
@@ -45,11 +55,11 @@ Check out more examples [here](https://github.com/lunatic-solutions/rust-lib/tre
 
 ### Setup
 
-To run the example you will first need to download the lunatic runtime by following the
-installation steps in [this repository][1]. The runtime is just single executable and runs on
-Windows, macOS and Linux. If you have already Rust installed, you can get it with:
+To run the example you will first need to download the lunatic runtime binary for your platform
+from the [fork's releases][8]. The runtime is just single executable and runs on
+Windows, macOS and Linux. If you have already Rust installed, you can build it with:
 ```bash
-cargo install lunatic-runtime
+cargo install --locked --git https://github.com/twitchax/lunatic --tag v0.15.0 lunatic-runtime
 ```
 
 [Lunatic][1] applications need to be compiled to [WebAssembly][3] before they can be executed by
@@ -122,3 +132,5 @@ What currently works:
 [4]: https://wasi.dev/
 [5]: https://golangbot.com/goroutines
 [6]: https://tokio.rs/
+[7]: https://github.com/twitchax/lunatic
+[8]: https://github.com/twitchax/lunatic/releases

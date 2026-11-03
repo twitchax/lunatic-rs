@@ -1,10 +1,11 @@
 [package]
-name = "lunatic-macros"
-version = "0.13.0"
+name = "lunatic-macros-twitchax-patch"
+version = "0.13.1"
 edition = "2018"
 authors = ["Bernard Kolobara <bernard@lunatic.solutions>"]
 description = "Helper macros for the `lunatic` crate"
 license = "Apache-2.0/MIT"
+repository = "https://github.com/twitchax/lunatic-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,5 +16,7 @@ proc-macro2 = "1.0"
 quote = "1"
 syn = { version = "3", features = ["full", "extra-traits"] }
 
+# Published as `lunatic-macros-twitchax-patch`, but imported as `lunatic_macros`.
 [lib]
+name = "lunatic_macros"
 proc-macro = true
