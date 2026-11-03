@@ -18,8 +18,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: twitchax/lunatic
-          # The wasmtime upgrade lives on this branch until it merges to main.
-          ref: upgrade
+          ref: main
           path: lunatic
       - name: Install rust
         uses: dtolnay/rust-toolchain@stable
